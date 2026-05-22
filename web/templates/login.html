@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Login Page</title>
+        <br>Login</br>
+    </head>
+    <body>
+    <br>
+        <form method="post" action="\login">
+            <input name="username">username</input>
+            <br><input name="password">password</input></br>
+            <button type="submit">submit</button>
+        </form>
+    </br>
+    <br>
+        {{if .message}}
+            <p>{{.message}}</p>
+        {{end}}
+    </br>
+    </body>
+    <script>
+        console.log("Current URL: " + window.location.href);
+    </script>
+</html>

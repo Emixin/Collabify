@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Signup Page</title>
+        <br>Signup</br>
+    </head>
+    <br><body>
+        <form method="post">
+            <input name="username">username</input>
+            <br><input name="email">email</input></br>
+            <input name="password">password</input>
+            <br><input name="confirm_password">confirm password</input></br>
+            <button type="submit">Submit</button>
+        </form>
+    </body></br>
+    <br>
+        {{if .message}}
+            <p>{{.message}}</p>
+        {{end}}
+    </br>
+</html>

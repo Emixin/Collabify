@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Users List</title>
+    </head>
+    <body>
+    <br>
+        {{range .users_list}}
+            <ul>
+                <li>{{.ID}}, {{.Username}}, {{.Email}}</li>
+            </ul>
+        {{end}}
+    </br>
+    <br>
+    {{if .message}}
+        <p>{{.message}}</p>
+    {{end}}
+    </br>
+    </body>
+</html>
