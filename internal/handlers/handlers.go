@@ -59,13 +59,13 @@ func SignuppageHandler(context *gin.Context) {
 			err := database.DB.Create(&user).Error
 			if err != nil {
 				log.Println(err)
-				context.HTML(http.StatusInternalServerError, "web/templates/signup.html", gin.H{
+				context.HTML(http.StatusInternalServerError, "signup.html", gin.H{
 					"message": "failed to create new user!",
 				})
 				return
 			}
 
-			context.HTML(http.StatusOK, "web/templates/signup.html", gin.H{
+			context.HTML(http.StatusOK, "signup.html", gin.H{
 				"message": "new user created!",
 			})
 		}
@@ -77,13 +77,13 @@ func UserslistHandler(context *gin.Context) {
 	err := database.DB.Find(&users_list).Error
 	if err != nil {
 		log.Println(err)
-		context.HTML(http.StatusOK, "web/templates/users_list.html", gin.H{
+		context.HTML(http.StatusOK, "users_list.html", gin.H{
 			"message": "failed to query db",
 		})
 		return
 	}
 
-	context.HTML(http.StatusOK, "web/templates/users_list.html", gin.H{
+	context.HTML(http.StatusOK, "users_list.html", gin.H{
 		"users_list": users_list,
 		"message":    "user table fetched successfully!",
 	})

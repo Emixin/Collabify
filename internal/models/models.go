@@ -6,25 +6,14 @@ import (
 	_ "gorm.io/gorm"
 )
 
-type UserType struct {
-	NullString sql.NullString
-}
-
-func NullUserType(str string) UserType {
-	return UserType{
-		NullString: sql.NullString{
-			String: str,
-			Valid:  str != "",
-		},
-	}
-}
+type UserType string
 
 var (
-	TypeLeader    UserType = NullUserType("Leader")
-	TypeSupporter UserType = NullUserType("Supporter")
-	TypeDoer      UserType = NullUserType("Doer")
-	TypeThinker   UserType = NullUserType("Thinker")
-	TypeConnector UserType = NullUserType("Connector")
+	TypeLeader    UserType = "Leader"
+	TypeSupporter UserType = "Supporter"
+	TypeDoer      UserType = "Doer"
+	TypeThinker   UserType = "Thinker"
+	TypeConnector UserType = "Connector"
 )
 
 type User struct {
