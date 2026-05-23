@@ -19,6 +19,7 @@ func main() {
 	router.POST("signup", handlers.SignuppageHandler)
 	router.GET("/users_list", handlers.UserslistHandler)
 	router.GET("/teams_list", handlers.TeamslistHandler)
+	router.GET("/tasks_list", handlers.TasklistHandler)
 
 	router.LoadHTMLGlob("web/templates/*.html")
 	router.Static("/statics", "./web/statics")

@@ -107,3 +107,20 @@ func TeamslistHandler(context *gin.Context) {
 		"teams_list": teams_list,
 	})
 }
+
+func TasklistHandler(context *gin.Context) {
+	tasks_list := []models.Task{}
+	err := database.DB.Preload("Team").Preload("Team.Leader").Preload("Team.Members").Find(&tasks_list).Error
+
+	if err != nil {
+		log.Println(err)
+		context.HTML(http.StatusInternalServerError, "tasks_list.html", gin.H{
+			"message": "failed to query db",
+		})
+		return
+	}
+
+	context.HTML(http.StatusOK, "tasks_list.html", gin.H{
+		"tasks_list": tasks_list,
+	})
+}

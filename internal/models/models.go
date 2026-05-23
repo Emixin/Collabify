@@ -33,6 +33,6 @@ type Task struct {
 	ID       int `gorm:"primaryKey"`
 	Name     string
 	TeamID   int
-	Team     Team `gorm:"many2many:task_teams;"`
+	Team     Team `gorm:"foreignKey:TeamID"`
 	Deadline string
 }

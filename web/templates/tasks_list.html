@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Teams List</title>
+        <title>Tasks List</title>
     </head>
     <body>
 
     <ul>
-        {{range .teams_list}}
-            <li>ID: {{.ID}}, Name: {{.Name}}, LeaderID: {{.LeaderID}}, Leader: {{.Leader}}, Members: {{.Members}}</li>
+        {{range .tasks_list}}
+            <li>ID: {{.ID}}, Name: {{.Name}}, TeamID: {{.TeamID}}, Team: {{.Team.Name}}, Deadline: {{.Deadline}}</li>
         {{end}}
     </ul>
 
