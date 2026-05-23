@@ -1,10 +1,6 @@
 package models
 
-import (
-	"database/sql"
-
-	_ "gorm.io/gorm"
-)
+import _ "gorm.io/gorm"
 
 type UserType string
 
@@ -14,6 +10,7 @@ var (
 	TypeDoer      UserType = "Doer"
 	TypeThinker   UserType = "Thinker"
 	TypeConnector UserType = "Connector"
+	NoType	      UserType = "NoType"
 )
 
 type User struct {
@@ -21,7 +18,7 @@ type User struct {
 	Username string
 	Email    string
 	Type     UserType
-	Score    sql.NullInt64
+	Score    int
 }
 
 type Team struct {
