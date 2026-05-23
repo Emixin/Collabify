@@ -10,7 +10,7 @@ var (
 	TypeDoer      UserType = "Doer"
 	TypeThinker   UserType = "Thinker"
 	TypeConnector UserType = "Connector"
-	NoType	      UserType = "NoType"
+	NoType        UserType = "NoType"
 )
 
 type User struct {
@@ -22,15 +22,17 @@ type User struct {
 }
 
 type Team struct {
-	ID      int `gorm:"primaryKey"`
-	Name    string
-	Leader  User
-	Members []User
+	ID       int `gorm:"primaryKey"`
+	Name     string
+	LeaderID int
+	Leader   User   `gorm:"foreignKey:LeaderID"`
+	Members  []User `gorm:"many2many:team_users;"`
 }
 
 type Task struct {
 	ID       int `gorm:"primaryKey"`
 	Name     string
-	Team     Team
+	TeamID   int
+	Team     Team `gorm:"many2many:task_teams;"`
 	Deadline string
 }

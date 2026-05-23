@@ -4,6 +4,14 @@
         <title>Users List</title>
     </head>
     <body>
+
+    <ul>
+        {{range .teams_list}}
+            <li>ID: {{.ID}}, Name: {{.Name}}, LeaderID: {{.LeaderID}}, Leader: {{.Leader}}, Members: {{.Members}}</li>
+        {{end}}
+    </ul>
+
+    <br>
     {{if .message}}
         <p>{{.message}}</p>
     {{end}}

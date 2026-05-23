@@ -54,6 +54,8 @@ func SignuppageHandler(context *gin.Context) {
 			user := models.User{
 				Username: username,
 				Email:    email,
+				Type:     "NoType",
+				Score:    0,
 			}
 
 			err := database.DB.Create(&user).Error
@@ -90,5 +92,18 @@ func UserslistHandler(context *gin.Context) {
 }
 
 func TeamslistHandler(context *gin.Context) {
-	context.HTML(http.StatusOK, "teams_list.html", nil)
+	teams_list := []models.Team{}
+	err := database.DB.Preload("Members").Preload("Leader").Find(&teams_list).Error
+
+	if err != nil {
+		log.Println(err)
+		context.HTML(http.StatusOK, "users_list.html", gin.H{
+			"message": "failed to query db",
+		})
+		return
+	}
+
+	context.HTML(http.StatusOK, "teams_list.html", gin.H{
+		"teams_list": teams_list,
+	})
 }
