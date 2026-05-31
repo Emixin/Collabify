@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Create a Team</title>
+    </head>
+    <body>
+        <form type="post">
+            <input name="Name">Name</input>
+            <input name="Leader">Leader</input>
+            <button type="submit">Submit</button>
+        </form>
+    </body>
+
+    {{if .message}}
+        <p>{{.message}}</p>
+    {{end}}
+
+</html>

@@ -36,7 +36,6 @@ func SignuppageHandler(context *gin.Context) {
 	if context.Request.Method == "GET" {
 		context.HTML(http.StatusOK, "signup.html", nil)
 	} else if context.Request.Method == "POST" {
-		log.Println("else if block")
 		context.Request.ParseForm()
 		username := context.Request.FormValue("username")
 		email := context.Request.FormValue("email")
@@ -91,6 +90,52 @@ func UserslistHandler(context *gin.Context) {
 	})
 }
 
+// TODO: check this handler later!
+func CreateTeamHandler(context *gin.Context) {
+	if context.Request.Method == "GET" {
+		context.HTML(http.StatusOK, "create_team.html", nil)
+	} else if context.Request.Method == "POST" {
+		context.Request.ParseForm()
+		name := context.Request.FormValue("Name")
+		leader_name := context.Request.FormValue("Leader")
+
+		var leader models.User
+		err := database.DB.Where(&models.User{Username: leader_name}).First(&leader).Error
+		if err != nil {
+			log.Println(err)
+			context.HTML(http.StatusOK, "users_list.html", gin.H{
+				"message": "failed to query db",
+			})
+			return
+		}
+
+		team := models.Team{
+			Name:   name,
+			Leader: leader,
+		}
+		err = database.DB.Create(&team).Error
+		if err != nil {
+			context.HTML(http.StatusInternalServerError, "create_team.html", gin.H{
+				"message": "falied to create new team!",
+			})
+			return
+		}
+
+		context.HTML(http.StatusOK, "create_team.html", gin.H{
+			"message": "new team created!",
+		})
+	}
+
+}
+
+func DeleteTeamHandler(context *gin.Context) {
+	// TODO: complete this function later!
+}
+
+func UpdateTeamHandler(context *gin.Context) {
+	// TODO: complete this function later!
+}
+
 func TeamslistHandler(context *gin.Context) {
 	teams_list := []models.Team{}
 	err := database.DB.Preload("Members").Preload("Leader").Find(&teams_list).Error
@@ -106,6 +151,18 @@ func TeamslistHandler(context *gin.Context) {
 	context.HTML(http.StatusOK, "teams_list.html", gin.H{
 		"teams_list": teams_list,
 	})
+}
+
+func CreateTaskHandler(context *gin.Context) {
+	// TODO: complete this function later!
+}
+
+func DeleteTaskHandler(context *gin.Context) {
+	// TODO: complete this function later!
+}
+
+func UpdateTaskHandler(context *gin.Context) {
+	// TODO: complete this function later!
 }
 
 func TasklistHandler(context *gin.Context) {
