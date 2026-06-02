@@ -98,8 +98,8 @@ func CreateTeamHandler(context *gin.Context) {
 		name := context.Request.FormValue("Name")
 		leader_name := context.Request.FormValue("Leader")
 
-		var leader models.User
-		err := database.DB.Where(&models.User{Username: leader_name}).First(&leader).Error
+		var leader_obj models.User
+		err := database.DB.Where(&models.User{Username: leader_name}).First(&leader_obj).Error
 		if err != nil {
 			log.Println(err)
 			context.HTML(http.StatusOK, "users_list.html", gin.H{
@@ -110,7 +110,7 @@ func CreateTeamHandler(context *gin.Context) {
 
 		team := models.Team{
 			Name:   name,
-			Leader: leader,
+			Leader: leader_obj,
 		}
 		err = database.DB.Create(&team).Error
 		if err != nil {
@@ -170,7 +170,7 @@ func TeamslistHandler(context *gin.Context) {
 
 	if err != nil {
 		log.Println(err)
-		context.HTML(http.StatusOK, "users_list.html", gin.H{
+		context.HTML(http.StatusInternalServerError, "users_list.html", gin.H{
 			"message": "failed to query db",
 		})
 		return
@@ -181,12 +181,45 @@ func TeamslistHandler(context *gin.Context) {
 	})
 }
 
+// TODO: check this later!
 func CreateTaskHandler(context *gin.Context) {
-	// TODO: complete this function later!
+	if context.Request.Method == "GET" {
+		context.HTML(http.StatusOK, "create_task.html", nil)
+	} else if context.Request.Method == "POST" {
+		name := context.Request.FormValue("Name")
+		team_name := context.Request.FormValue("Team")
+		deadline := context.Request.FormValue("Deadline")
+
+		var team_obj models.Team
+		err := database.DB.Where(&models.Team{Name: team_name}).First(&team_obj).Error
+
+		if err != nil {
+			log.Println(err)
+			context.HTML(http.StatusInternalServerError, "users_list.html", gin.H{
+				"message": "team not found!",
+			})
+			return
+		}
+
+		task := models.Task{
+			Name:     name,
+			Team:     team_obj,
+			Deadline: deadline,
+		}
+		database.DB.Create(&task)
+
+		context.HTML(http.StatusOK, "create_task.html", gin.H{
+			"message": "new task created!",
+		})
+	}
 }
 
 func DeleteTaskHandler(context *gin.Context) {
-	// TODO: complete this function later!
+	if context.Request.Method == "GET" {
+		context.HTML(http.StatusOK, "delete_task.html", nil)
+	} else if context.Request.Method == "POST" {
+		// TODO: complete here later!
+	}
 }
 
 func UpdateTaskHandler(context *gin.Context) {

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Delete a Task</title>
+    </head>
+    <body>
+        <form method="post">
+            <input name="Name">Name</input>
+            <input name="Team">Team</input>
+            <button type="submit">Submit</button>
+        </form>
+        {{if .message}}
+            <p>{{.message}}</p>
+        {{end}}
+    </body>
+</html>
