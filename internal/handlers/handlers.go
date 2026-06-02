@@ -90,7 +90,6 @@ func UserslistHandler(context *gin.Context) {
 	})
 }
 
-// TODO: check this handler later!
 func CreateTeamHandler(context *gin.Context) {
 	if context.Request.Method == "GET" {
 		context.HTML(http.StatusOK, "create_team.html", nil)
@@ -129,7 +128,36 @@ func CreateTeamHandler(context *gin.Context) {
 }
 
 func DeleteTeamHandler(context *gin.Context) {
-	// TODO: complete this function later!
+	if context.Request.Method == "GET" {
+		context.HTML(http.StatusOK, "delete_team.html", nil)
+	} else if context.Request.Method == "POST" {
+		context.Request.ParseForm()
+		name := context.Request.FormValue("Name")
+		var team models.Team
+		err := database.DB.Where(&models.Team{Name: name}).First(&team)
+		if err != nil {
+			context.HTML(http.StatusInternalServerError, "delete_team.html", gin.H{
+				"message": "could not find the team!",
+			})
+			return
+		}
+		if team.Leader.Username == context.Request.URL.User.Username() {
+			err := database.DB.Where(&models.Team{Name: name}).Delete(&models.Team{}).Error
+			if err != nil {
+				context.HTML(http.StatusInternalServerError, "delete_team.html", gin.H{
+					"message": "could not delete the user!",
+				})
+				return
+			}
+			context.HTML(http.StatusOK, "delete_team.html", gin.H{
+				"message": "deleted the team!",
+			})
+		} else {
+			context.HTML(http.StatusInternalServerError, "delete_team.html", gin.H{
+				"message": "only team leader can perform this action!",
+			})
+		}
+	}
 }
 
 func UpdateTeamHandler(context *gin.Context) {

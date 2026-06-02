@@ -22,6 +22,8 @@ func main() {
 	router.GET("/tasks_list", handlers.TasklistHandler)
 	router.GET("/create_team", handlers.CreateTeamHandler)
 	router.POST("/create_team", handlers.CreateTeamHandler)
+	router.GET("/delete_team", handlers.DeleteTeamHandler)
+	router.POST("/delete_team", handlers.DeleteTeamHandler)
 
 	router.LoadHTMLGlob("web/templates/*.html")
 	router.Static("/statics", "./web/statics")
