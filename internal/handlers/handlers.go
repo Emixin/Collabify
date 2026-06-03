@@ -181,7 +181,6 @@ func TeamslistHandler(context *gin.Context) {
 	})
 }
 
-// TODO: check this later!
 func CreateTaskHandler(context *gin.Context) {
 	if context.Request.Method == "GET" {
 		context.HTML(http.StatusOK, "create_task.html", nil)
@@ -218,7 +217,31 @@ func DeleteTaskHandler(context *gin.Context) {
 	if context.Request.Method == "GET" {
 		context.HTML(http.StatusOK, "delete_task.html", nil)
 	} else if context.Request.Method == "POST" {
-		// TODO: complete here later!
+		name := context.Request.FormValue("Name")
+		team_name := context.Request.FormValue("Team")
+
+		var team_obj models.Team
+		err := database.DB.Where(&models.Team{Name: team_name}).Find(&team_obj).Error
+		if err != nil {
+			log.Println(err)
+			context.HTML(http.StatusInternalServerError, "tasks_list.html", gin.H{
+				"message": "team not found!",
+			})
+			return
+		}
+
+		err = database.DB.Where(&models.Task{Name: name, Team: team_obj}).Delete(&models.Task{}).Error
+		if err != nil {
+			log.Println(err)
+			context.HTML(http.StatusInternalServerError, "tasks_list.html", gin.H{
+				"message": "failed to delete the task!",
+			})
+			return
+		}
+
+		context.HTML(http.StatusOK, "delete_task.html", gin.H{
+			"message": "task has been deleted!",
+		})
 	}
 }
 
