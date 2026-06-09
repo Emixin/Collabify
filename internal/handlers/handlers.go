@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func HomepageHandler(context *gin.Context) {
@@ -15,11 +16,11 @@ func HomepageHandler(context *gin.Context) {
 
 func LoginpageHandler(context *gin.Context) {
 
-	if context.Request.Method == "GET" {
-		log.Println("entered if block")
+	switch context.Request.Method {
+	case "GET":
 		context.HTML(http.StatusOK, "login.html", nil)
-	} else if context.Request.Method == "POST" {
-		log.Println("entered else if block")
+
+	case "POST":
 		context.Request.ParseForm()
 		username := context.Request.FormValue("username")
 		password := context.Request.FormValue("password")
@@ -28,36 +29,81 @@ func LoginpageHandler(context *gin.Context) {
 			context.HTML(http.StatusOK, "login.html", gin.H{
 				"message": "Please enter both username and password and submit",
 			})
+			return
 		}
+
+		var user_obj models.User
+		err := database.DB.Where(&models.User{Username: username}).Find(&user_obj).Error
+
+		if err != nil {
+			log.Println(err)
+			context.HTML(http.StatusUnauthorized, "login.html", gin.H{
+				"message": "either username or password is incorrect!",
+			})
+			return
+		}
+
+		err = bcrypt.CompareHashAndPassword([]byte(user_obj.PasswordHash), []byte(password))
+		if err != nil {
+			log.Println(err)
+			context.HTML(http.StatusUnauthorized, "login.html", gin.H{
+				"message": "either username or password is incorrect!",
+			})
+			return
+		}
+
+		context.HTML(http.StatusOK, "dashboard.html", gin.H{
+			"message":  "logged in successfully!",
+			"username": username,
+		})
+
+	default:
+		context.HTML(http.StatusMethodNotAllowed, "login.html", gin.H{
+			"message": "Method not allowed!",
+		})
 	}
 }
 
 func SignuppageHandler(context *gin.Context) {
-	if context.Request.Method == "GET" {
+	switch context.Request.Method {
+	case "GET":
 		context.HTML(http.StatusOK, "signup.html", nil)
-	} else if context.Request.Method == "POST" {
+	case "POST":
 		context.Request.ParseForm()
 		username := context.Request.FormValue("username")
 		email := context.Request.FormValue("email")
 		password := context.Request.FormValue("password")
 		confirm_password := context.Request.FormValue("confirm_password")
-		if username == "" || password == "" || confirm_password == "" {
+
+		switch {
+		case username == "" || password == "" || confirm_password == "" || email == "":
 			context.HTML(http.StatusOK, "signup.html", gin.H{
 				"message": "Please enter all fields then submit",
 			})
-		} else if password != confirm_password {
+		case password != confirm_password:
 			context.HTML(http.StatusOK, "signup.html", gin.H{
 				"message": "passwords did not match!",
 			})
-		} else {
-			user := models.User{
-				Username: username,
-				Email:    email,
-				Type:     "NoType",
-				Score:    0,
+		default:
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+			if err != nil {
+				log.Println(err)
+				context.HTML(http.StatusInternalServerError, "signup.html", gin.H{
+					"message": "failed to create new user!",
+				})
+				return
 			}
 
-			err := database.DB.Create(&user).Error
+			user := models.User{
+				Username:     username,
+				PasswordHash: string(hashedPassword),
+				Email:        email,
+				Type:         "NoType",
+				Score:        0,
+			}
+
+			err = database.DB.Create(&user).Error
 			if err != nil {
 				log.Println(err)
 				context.HTML(http.StatusInternalServerError, "signup.html", gin.H{
@@ -70,6 +116,10 @@ func SignuppageHandler(context *gin.Context) {
 				"message": "new user created!",
 			})
 		}
+	default:
+		context.HTML(http.StatusMethodNotAllowed, "signup.html", gin.H{
+			"message": "Method not allowed!",
+		})
 	}
 }
 
@@ -160,10 +210,6 @@ func DeleteTeamHandler(context *gin.Context) {
 	}
 }
 
-func UpdateTeamHandler(context *gin.Context) {
-	// TODO: complete this function later!
-}
-
 func TeamslistHandler(context *gin.Context) {
 	teams_list := []models.Team{}
 	err := database.DB.Preload("Members").Preload("Leader").Find(&teams_list).Error
@@ -243,10 +289,6 @@ func DeleteTaskHandler(context *gin.Context) {
 			"message": "task has been deleted!",
 		})
 	}
-}
-
-func UpdateTaskHandler(context *gin.Context) {
-	// TODO: complete this function later!
 }
 
 func TasklistHandler(context *gin.Context) {

@@ -13,10 +13,8 @@ func main() {
 	router := gin.Default()
 
 	router.GET("/", handlers.HomepageHandler)
-	router.GET("/login", handlers.LoginpageHandler)
-	router.POST("login", handlers.LoginpageHandler)
-	router.GET("/signup", handlers.SignuppageHandler)
-	router.POST("signup", handlers.SignuppageHandler)
+	router.Any("/login", handlers.LoginpageHandler)
+	router.Any("/signup", handlers.SignuppageHandler)
 	router.GET("/users_list", handlers.UserslistHandler)
 	router.GET("/teams_list", handlers.TeamslistHandler)
 	router.GET("/tasks_list", handlers.TasklistHandler)

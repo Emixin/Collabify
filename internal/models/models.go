@@ -14,11 +14,12 @@ var (
 )
 
 type User struct {
-	ID       int `gorm:"primaryKey"`
-	Username string
-	Email    string
-	Type     UserType
-	Score    int
+	ID           int `gorm:"primaryKey"`
+	Username     string
+	PasswordHash string
+	Email        string
+	Type         UserType
+	Score        int
 }
 
 type Team struct {

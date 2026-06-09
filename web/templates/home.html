@@ -12,10 +12,9 @@
             <a href="users_list">Users List</a>
             <a href="teams_list">Teams List</a>
             <a href="tasks_list">Tasks List</a>
-            <a href="create_team">Create Team</a>
-            <a href="delete_team">Delete Team</a>
-            <a href="create_task">Create Task</a>
-            <a href="delete_task">Delete Task</a>
         </div>
+        {{if .message}}
+            <p>{{.message}}</p>
+        {{end}}
     </body>
 </html>
