@@ -2,15 +2,20 @@
 <html>
     <head>
         <title>Login Page</title>
-        <br>Login</br>
+        <br><h1>Login</h1>
+        <link rel="stylesheet" href="statics/login.css">
     </head>
     <body>
     <br>
-        <form method="post" action="\login">
-            <input name="username">username</input>
-            <br><input name="password">password</input></br>
-            <button type="submit">submit</button>
-        </form>
+        <div class="login_form">
+            <form method="post" action="\login">
+                <div class="form_inputs">
+                    <input name="username"><h2>username</h2></input>
+                    <br><input name="password"><h2>password</h2></input></br>
+                    <button type="submit"><h2>submit</h2></button>
+                </div>
+            </form>
+        </div>
     </br>
     <br>
         {{if .message}}
