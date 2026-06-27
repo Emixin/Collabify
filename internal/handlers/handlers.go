@@ -26,18 +26,18 @@ func LoginpageHandler(context *gin.Context) {
 		password := context.Request.FormValue("password")
 
 		if username == "" || password == "" {
-			context.HTML(http.StatusOK, "login.html", gin.H{
+			context.HTML(http.StatusBadRequest, "login.html", gin.H{
 				"message": "Please enter both username and password and submit",
 			})
 			return
 		}
 
 		var user_obj models.User
-		err := database.DB.Where(&models.User{Username: username}).Find(&user_obj).Error
+		err := database.DB.Where(&models.User{Username: username}).First(&user_obj).Error
 
 		if err != nil {
 			log.Println(err)
-			context.HTML(http.StatusUnauthorized, "login.html", gin.H{
+			context.HTML(http.StatusNotFound, "login.html", gin.H{
 				"message": "either username or password is incorrect!",
 			})
 			return
@@ -77,11 +77,11 @@ func SignuppageHandler(context *gin.Context) {
 
 		switch {
 		case username == "" || password == "" || confirm_password == "" || email == "":
-			context.HTML(http.StatusOK, "signup.html", gin.H{
+			context.HTML(http.StatusBadRequest, "signup.html", gin.H{
 				"message": "Please enter all fields then submit",
 			})
 		case password != confirm_password:
-			context.HTML(http.StatusOK, "signup.html", gin.H{
+			context.HTML(http.StatusBadRequest, "signup.html", gin.H{
 				"message": "passwords did not match!",
 			})
 		default:
@@ -128,7 +128,7 @@ func UserslistHandler(context *gin.Context) {
 	err := database.DB.Find(&users_list).Error
 	if err != nil {
 		log.Println(err)
-		context.HTML(http.StatusOK, "users_list.html", gin.H{
+		context.HTML(http.StatusInternalServerError, "users_list.html", gin.H{
 			"message": "failed to query db",
 		})
 		return
@@ -152,7 +152,7 @@ func CreateTeamHandler(context *gin.Context) {
 		err := database.DB.Where(&models.User{Username: leader_name}).First(&leader_obj).Error
 		if err != nil {
 			log.Println(err)
-			context.HTML(http.StatusOK, "users_list.html", gin.H{
+			context.HTML(http.StatusInternalServerError, "users_list.html", gin.H{
 				"message": "failed to query db",
 			})
 			return
