@@ -1,7 +1,8 @@
 package database
 
 import (
-	"collabify/internal/models"
+	"github.com/Emixin/Collabify/internal/models"
+
 	"log"
 
 	"gorm.io/driver/sqlite"

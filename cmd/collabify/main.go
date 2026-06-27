@@ -1,9 +1,10 @@
 package main
 
 import (
-	"collabify/internal/database"
-	"collabify/internal/handlers"
 	"fmt"
+
+	"github.com/Emixin/Collabify/internal/database"
+	"github.com/Emixin/Collabify/internal/handlers"
 
 	"github.com/gin-gonic/gin"
 )

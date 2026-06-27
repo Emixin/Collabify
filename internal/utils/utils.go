@@ -1,8 +1,9 @@
 package utils
 
 import (
-	"collabify/internal/database"
-	"collabify/internal/models"
+	"github.com/Emixin/Collabify/internal/database"
+	"github.com/Emixin/Collabify/internal/models"
+
 	"testing"
 
 	"gorm.io/driver/sqlite"

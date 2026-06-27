@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"collabify/internal/database"
-	"collabify/internal/models"
-	"collabify/internal/utils"
+	"github.com/Emixin/Collabify/internal/database"
+	"github.com/Emixin/Collabify/internal/models"
+	"github.com/Emixin/Collabify/internal/utils"
+
 	"net/http"
 	"net/http/httptest"
 	"net/url"
