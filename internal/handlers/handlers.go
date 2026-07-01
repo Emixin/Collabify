@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/Emixin/Collabify/internal/database"
 	"github.com/Emixin/Collabify/internal/models"
+	"github.com/gin-contrib/sessions"
 
 	"log"
 	"net/http"
@@ -12,7 +13,21 @@ import (
 )
 
 func HomepageHandler(context *gin.Context) {
-	context.HTML(http.StatusOK, "home.html", nil)
+
+	session := sessions.Default(context)
+	username := session.Get("username")
+
+	if username == "" {
+		context.HTML(http.StatusOK, "home.html", gin.H{
+			"message":  "",
+			"username": "Anonymous User",
+		})
+	} else {
+		context.HTML(http.StatusOK, "home.html", gin.H{
+			"message":  "You have 0 task and none of them is pending",
+			"username": username,
+		})
+	}
 }
 
 func LoginpageHandler(context *gin.Context) {
@@ -52,6 +67,11 @@ func LoginpageHandler(context *gin.Context) {
 			})
 			return
 		}
+
+		session := sessions.Default(context)
+		session.Set("user_id", user_obj.ID)
+		session.Set("username", user_obj.Username)
+		session.Save()
 
 		context.HTML(http.StatusOK, "dashboard.html", gin.H{
 			"message":  "logged in successfully!",
@@ -306,5 +326,14 @@ func TasklistHandler(context *gin.Context) {
 
 	context.HTML(http.StatusOK, "tasks_list.html", gin.H{
 		"tasks_list": tasks_list,
+	})
+}
+
+// TODO: Complete this function later!
+func UserDashboardHandler(context *gin.Context) {
+	session := sessions.Default(context)
+	username := session.Get("username")
+	context.HTML(http.StatusOK, "dashboard.html", gin.H{
+		"username": username,
 	})
 }

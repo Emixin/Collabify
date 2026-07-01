@@ -2,7 +2,7 @@
 <html>
     <head>
         <title>Home Page</title>
-        <br><h1>Welcome to collabify!</h1>
+        <br><h1>Welcome to collabify {{ .username }} !</h1>
         <link rel="stylesheet" href="statics/home.css">
     </head>
     <body>
@@ -12,9 +12,10 @@
             <a href="users_list">Users List</a>
             <a href="teams_list">Teams List</a>
             <a href="tasks_list">Tasks List</a>
+            <a href="dashboard">User Dashboard</a>
         </div>
-        {{if .message}}
-            <p>{{.message}}</p>
-        {{end}}
+        {{ if .message }}
+            <p>{{ .message }}</p>
+        {{ end }}
     </body>
 </html>

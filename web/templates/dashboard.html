@@ -2,7 +2,7 @@
 <html>
     <head>
         <title>User Dashboard</title>
-        <br>Welcome {{.username}}!
+        <br>Welcome {{ .username }}!
     </head>
     <body>
         <div class="links">
@@ -11,6 +11,7 @@
             <a href="delete_team">Delete Team</a>
             <a href="create_task">Create Task</a>
             <a href="delete_task">Delete Task</a>
+            <a href="/">Home</a>
         </div>
         {{if .message}}
             <p>{{.message}}</p>
