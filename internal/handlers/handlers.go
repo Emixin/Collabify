@@ -16,17 +16,31 @@ func HomepageHandler(context *gin.Context) {
 
 	session := sessions.Default(context)
 	username := session.Get("username")
+	redirected := session.Get("redirect")
 
-	if username == "" {
+	if redirected != nil {
+		session.Delete("redirect")
+		session.Save()
+
 		context.HTML(http.StatusOK, "home.html", gin.H{
-			"message":  "",
-			"username": "Anonymous User",
+			"username":         "Anonymous User",
+			"redirect_message": "Logged out successfully!",
+			"is_authenticated": false,
 		})
 	} else {
-		context.HTML(http.StatusOK, "home.html", gin.H{
-			"message":  "You have 0 task and none of them is pending",
-			"username": username,
-		})
+		if username == nil {
+			context.HTML(http.StatusOK, "home.html", gin.H{
+				"message":          "You have 0 task and none of them is pending",
+				"username":         "Anonymous User",
+				"is_authenticated": false,
+			})
+		} else {
+			context.HTML(http.StatusOK, "home.html", gin.H{
+				"message":          "You have 0 task and none of them is pending",
+				"username":         username,
+				"is_authenticated": true,
+			})
+		}
 	}
 }
 
@@ -71,6 +85,7 @@ func LoginpageHandler(context *gin.Context) {
 		session := sessions.Default(context)
 		session.Set("user_id", user_obj.ID)
 		session.Set("username", user_obj.Username)
+		session.Set("email", user_obj.Email)
 		session.Save()
 
 		context.HTML(http.StatusOK, "dashboard.html", gin.H{
@@ -86,9 +101,20 @@ func LoginpageHandler(context *gin.Context) {
 }
 
 func SignuppageHandler(context *gin.Context) {
+	session := sessions.Default(context)
+	user_id := session.Get("user_id")
+
+	if user_id != nil {
+		context.HTML(http.StatusBadRequest, "signup.html", gin.H{
+			"is_authenticated": true,
+		})
+		return
+	}
+
 	switch context.Request.Method {
 	case "GET":
 		context.HTML(http.StatusOK, "signup.html", nil)
+
 	case "POST":
 		context.Request.ParseForm()
 		username := context.Request.FormValue("username")
@@ -137,11 +163,33 @@ func SignuppageHandler(context *gin.Context) {
 				"message": "new user created!",
 			})
 		}
+
 	default:
 		context.HTML(http.StatusMethodNotAllowed, "signup.html", gin.H{
 			"message": "Method not allowed!",
 		})
 	}
+}
+
+func LogoutHandler(context *gin.Context) {
+	log.Println("LogoutHandler hit")
+
+	session := sessions.Default(context)
+
+	username := session.Get("username")
+	if username == nil {
+		context.HTML(http.StatusBadRequest, "home.html", gin.H{
+			"message": "You are not logged in!",
+		})
+		return
+	}
+
+	session.Delete("user_id")
+	session.Delete("username")
+	session.Delete("email")
+	session.Set("redirect", "not nil")
+	session.Save()
+	context.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
 func UserslistHandler(context *gin.Context) {
@@ -162,9 +210,10 @@ func UserslistHandler(context *gin.Context) {
 }
 
 func CreateTeamHandler(context *gin.Context) {
-	if context.Request.Method == "GET" {
+	switch context.Request.Method {
+	case "GET":
 		context.HTML(http.StatusOK, "create_team.html", nil)
-	} else if context.Request.Method == "POST" {
+	case "POST":
 		context.Request.ParseForm()
 		name := context.Request.FormValue("Name")
 		leader_name := context.Request.FormValue("Leader")
@@ -180,8 +229,9 @@ func CreateTeamHandler(context *gin.Context) {
 		}
 
 		team := models.Team{
-			Name:   name,
-			Leader: leader_obj,
+			Name:    name,
+			Leader:  leader_obj,
+			Members: []models.User{leader_obj},
 		}
 		err = database.DB.Create(&team).Error
 		if err != nil {
@@ -199,9 +249,10 @@ func CreateTeamHandler(context *gin.Context) {
 }
 
 func DeleteTeamHandler(context *gin.Context) {
-	if context.Request.Method == "GET" {
+	switch context.Request.Method {
+	case "GET":
 		context.HTML(http.StatusOK, "delete_team.html", nil)
-	} else if context.Request.Method == "POST" {
+	case "POST":
 		context.Request.ParseForm()
 		name := context.Request.FormValue("Name")
 		var team models.Team
@@ -212,7 +263,12 @@ func DeleteTeamHandler(context *gin.Context) {
 			})
 			return
 		}
-		if team.Leader.Username == context.Request.URL.User.Username() {
+
+		//TODO: Check here!
+		session := sessions.Default(context)
+		username := session.Get("username")
+
+		if team.Leader.Username == username {
 			err := database.DB.Where(&models.Team{Name: name}).Delete(&models.Team{}).Error
 			if err != nil {
 				context.HTML(http.StatusInternalServerError, "delete_team.html", gin.H{
@@ -249,9 +305,10 @@ func TeamslistHandler(context *gin.Context) {
 }
 
 func CreateTaskHandler(context *gin.Context) {
-	if context.Request.Method == "GET" {
+	switch context.Request.Method {
+	case "GET":
 		context.HTML(http.StatusOK, "create_task.html", nil)
-	} else if context.Request.Method == "POST" {
+	case "POST":
 		name := context.Request.FormValue("Name")
 		team_name := context.Request.FormValue("Team")
 		deadline := context.Request.FormValue("Deadline")
@@ -281,9 +338,10 @@ func CreateTaskHandler(context *gin.Context) {
 }
 
 func DeleteTaskHandler(context *gin.Context) {
-	if context.Request.Method == "GET" {
+	switch context.Request.Method {
+	case "GET":
 		context.HTML(http.StatusOK, "delete_task.html", nil)
-	} else if context.Request.Method == "POST" {
+	case "POST":
 		name := context.Request.FormValue("Name")
 		team_name := context.Request.FormValue("Team")
 
@@ -312,10 +370,39 @@ func DeleteTaskHandler(context *gin.Context) {
 	}
 }
 
+// TODO: Check if its actually returning user's tasks not all tasks!
 func TasklistHandler(context *gin.Context) {
-	tasks_list := []models.Task{}
-	err := database.DB.Preload("Team").Preload("Team.Leader").Preload("Team.Members").Find(&tasks_list).Error
+	session := sessions.Default(context)
+	userID := session.Get("user_id")
+	log.Printf("user id is:%v", userID)
 
+	if userID == nil {
+		context.HTML(http.StatusBadRequest, "tasks_list.html", gin.H{
+			"message": "you are not logged in!",
+		})
+		return
+	}
+
+	user_teams := []models.Team{}
+	err := database.DB.Preload("Members").Preload("Leader").Joins("JOIN team_users ON team_users.team_id=teams.id").Where("team_users.user_id=?", userID).Find(&user_teams).Error
+
+	if err != nil {
+		log.Println(err)
+		context.HTML(http.StatusInternalServerError, "tasks_list.html", gin.H{
+			"message": "failed to query db",
+		})
+		return
+	}
+
+	user_teams_ids := []uint{}
+	for _, team := range user_teams {
+		user_teams_ids = append(user_teams_ids, uint(team.ID))
+	}
+
+	tasks_list := []models.Task{}
+	err = database.DB.Preload("Team").Preload("Team.Leader").Preload("Team.Members").Where("team_id IN ?", user_teams_ids).Find(&tasks_list).Error
+
+	// TODO: Add error catching util to DRY!
 	if err != nil {
 		log.Println(err)
 		context.HTML(http.StatusInternalServerError, "tasks_list.html", gin.H{

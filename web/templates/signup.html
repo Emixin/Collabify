@@ -5,23 +5,29 @@
         <br>Signup</br>
     </head>
     <br><body>
-        <form method="post">
-           
-            <br><input name="username">
-            <label>username</label>
-            
-            <br><input name="email">
-            <label>email</label>
+        {{ if .is_authenticated}}
+            <p>You are already logged in!</p>
+        {{ else }}
+            <form method="post">
+                <br><input name="username">
+                <label>username</label>
+                
+                <br><input name="email">
+                <label>email</label>
 
-            <br><input type="password" name="password">
-            <label>password</label>
+                <br><input type="password" name="password">
+                <label>password</label>
 
-            <br><input type="password" name="confirm_password">
-            <label>confirm password</label>
+                <br><input type="password" name="confirm_password">
+                <label>confirm password</label>
 
-            <br><button type="submit">Submit</button>
-        </form>
-        <br>
+                <br><button type="submit">Submit</button>
+            </form>
+            <br>
+            <p>Already have an account?</p>
+            <a href="/login">Login</a>
+        {{ end }}
+
         {{if .message}}
             <p>{{.message}}</p>
         {{end}}

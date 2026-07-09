@@ -29,11 +29,12 @@ func main() {
 	}
 
 	store := cookie.NewStore([]byte(secret))
-	router.Use(sessions.Sessions("new-session", store))
+	router.Use(sessions.Sessions("collabify-session", store))
 
 	router.GET("/", handlers.HomepageHandler)
 	router.Any("/login", handlers.LoginpageHandler)
 	router.Any("/signup", handlers.SignuppageHandler)
+	router.Any("/logout", handlers.LogoutHandler)
 	router.GET("/users_list", handlers.UserslistHandler)
 	router.GET("/teams_list", handlers.TeamslistHandler)
 	router.GET("/tasks_list", handlers.TasklistHandler)
