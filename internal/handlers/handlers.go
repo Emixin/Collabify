@@ -256,23 +256,27 @@ func DeleteTeamHandler(context *gin.Context) {
 		context.Request.ParseForm()
 		name := context.Request.FormValue("Name")
 		var team models.Team
-		err := database.DB.Where(&models.Team{Name: name}).First(&team)
+		err := database.DB.Preload("Leader").Where(&models.Team{Name: name}).First(&team).Error
 		if err != nil {
+			log.Println(err)
 			context.HTML(http.StatusInternalServerError, "delete_team.html", gin.H{
 				"message": "could not find the team!",
 			})
 			return
 		}
 
-		//TODO: Check here!
 		session := sessions.Default(context)
 		username := session.Get("username")
+
+		log.Printf("username: %v", username)
+		log.Printf("team: %v", team)
+		log.Printf("team leader: %v", team.Leader.Username)
 
 		if team.Leader.Username == username {
 			err := database.DB.Where(&models.Team{Name: name}).Delete(&models.Team{}).Error
 			if err != nil {
 				context.HTML(http.StatusInternalServerError, "delete_team.html", gin.H{
-					"message": "could not delete the user!",
+					"message": "could not delete the team!",
 				})
 				return
 			}
@@ -370,7 +374,6 @@ func DeleteTaskHandler(context *gin.Context) {
 	}
 }
 
-// TODO: Check if its actually returning user's tasks not all tasks!
 func TasklistHandler(context *gin.Context) {
 	session := sessions.Default(context)
 	userID := session.Get("user_id")
