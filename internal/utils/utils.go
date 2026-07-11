@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"log"
+
 	"github.com/Emixin/Collabify/internal/database"
 	"github.com/Emixin/Collabify/internal/models"
+	"github.com/gin-gonic/gin"
 
 	"testing"
 
@@ -24,4 +27,12 @@ func SetupTestDB(t *testing.T) {
 
 	database.DB = db
 
+}
+
+func ErrorCatcher(err error, context *gin.Context, status_code int, template_name string, message string) {
+	// Added error catching util to Don't Repeat Myself!
+	log.Println(err)
+	context.HTML(status_code, template_name, gin.H{
+		"message": message,
+	})
 }

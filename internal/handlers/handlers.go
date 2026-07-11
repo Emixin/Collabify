@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/Emixin/Collabify/internal/database"
 	"github.com/Emixin/Collabify/internal/models"
+	"github.com/Emixin/Collabify/internal/utils"
 	"github.com/gin-contrib/sessions"
 
 	"log"
@@ -66,19 +67,13 @@ func LoginpageHandler(context *gin.Context) {
 		err := database.DB.Where(&models.User{Username: username}).First(&user_obj).Error
 
 		if err != nil {
-			log.Println(err)
-			context.HTML(http.StatusNotFound, "login.html", gin.H{
-				"message": "either username or password is incorrect!",
-			})
+			utils.ErrorCatcher(err, context, http.StatusNotFound, "login.html", "either username or password is incorrect!")
 			return
 		}
 
-		err = bcrypt.CompareHashAndPassword([]byte(user_obj.PasswordHash), []byte(password))
-		if err != nil {
-			log.Println(err)
-			context.HTML(http.StatusUnauthorized, "login.html", gin.H{
-				"message": "either username or password is incorrect!",
-			})
+		err2 := bcrypt.CompareHashAndPassword([]byte(user_obj.PasswordHash), []byte(password))
+		if err2 != nil {
+			utils.ErrorCatcher(err2, context, http.StatusUnauthorized, "login.html", "either username or password is incorrect!")
 			return
 		}
 
@@ -135,10 +130,7 @@ func SignuppageHandler(context *gin.Context) {
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 			if err != nil {
-				log.Println(err)
-				context.HTML(http.StatusInternalServerError, "signup.html", gin.H{
-					"message": "failed to create new user!",
-				})
+				utils.ErrorCatcher(err, context, http.StatusInternalServerError, "signup.html", "failed to create new user!")
 				return
 			}
 
@@ -150,12 +142,9 @@ func SignuppageHandler(context *gin.Context) {
 				Score:        0,
 			}
 
-			err = database.DB.Create(&user).Error
-			if err != nil {
-				log.Println(err)
-				context.HTML(http.StatusInternalServerError, "signup.html", gin.H{
-					"message": "failed to create new user!",
-				})
+			err2 := database.DB.Create(&user).Error
+			if err2 != nil {
+				utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "signup.html", "failed to create new user!")
 				return
 			}
 
@@ -196,10 +185,7 @@ func UserslistHandler(context *gin.Context) {
 	users_list := []models.User{}
 	err := database.DB.Find(&users_list).Error
 	if err != nil {
-		log.Println(err)
-		context.HTML(http.StatusInternalServerError, "users_list.html", gin.H{
-			"message": "failed to query db",
-		})
+		utils.ErrorCatcher(err, context, http.StatusInternalServerError, "users_list.html", "failed to query db")
 		return
 	}
 
@@ -235,9 +221,7 @@ func CreateTeamHandler(context *gin.Context) {
 		}
 		err = database.DB.Create(&team).Error
 		if err != nil {
-			context.HTML(http.StatusInternalServerError, "create_team.html", gin.H{
-				"message": "falied to create new team!",
-			})
+			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "create_team.html", "falied to create new team!")
 			return
 		}
 
@@ -258,10 +242,7 @@ func DeleteTeamHandler(context *gin.Context) {
 		var team models.Team
 		err := database.DB.Preload("Leader").Where(&models.Team{Name: name}).First(&team).Error
 		if err != nil {
-			log.Println(err)
-			context.HTML(http.StatusInternalServerError, "delete_team.html", gin.H{
-				"message": "could not find the team!",
-			})
+			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "delete_team.html", "could not find the team!")
 			return
 		}
 
@@ -273,11 +254,9 @@ func DeleteTeamHandler(context *gin.Context) {
 		log.Printf("team leader: %v", team.Leader.Username)
 
 		if team.Leader.Username == username {
-			err := database.DB.Where(&models.Team{Name: name}).Delete(&models.Team{}).Error
-			if err != nil {
-				context.HTML(http.StatusInternalServerError, "delete_team.html", gin.H{
-					"message": "could not delete the team!",
-				})
+			err2 := database.DB.Where(&models.Team{Name: name}).Delete(&models.Team{}).Error
+			if err2 != nil {
+				utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "delete_team.html", "could not find the team!")
 				return
 			}
 			context.HTML(http.StatusOK, "delete_team.html", gin.H{
@@ -296,10 +275,7 @@ func TeamslistHandler(context *gin.Context) {
 	err := database.DB.Preload("Members").Preload("Leader").Find(&teams_list).Error
 
 	if err != nil {
-		log.Println(err)
-		context.HTML(http.StatusInternalServerError, "users_list.html", gin.H{
-			"message": "failed to query db",
-		})
+		utils.ErrorCatcher(err, context, http.StatusInternalServerError, "users_list.html", "failed to query db")
 		return
 	}
 
@@ -321,10 +297,7 @@ func CreateTaskHandler(context *gin.Context) {
 		err := database.DB.Where(&models.Team{Name: team_name}).First(&team_obj).Error
 
 		if err != nil {
-			log.Println(err)
-			context.HTML(http.StatusInternalServerError, "users_list.html", gin.H{
-				"message": "team not found!",
-			})
+			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "users_list.html", "team not found!")
 			return
 		}
 
@@ -346,25 +319,29 @@ func DeleteTaskHandler(context *gin.Context) {
 	case "GET":
 		context.HTML(http.StatusOK, "delete_task.html", nil)
 	case "POST":
+		session := sessions.Default(context)
+		username := session.Get("username")
+
 		name := context.Request.FormValue("Name")
 		team_name := context.Request.FormValue("Team")
 
 		var team_obj models.Team
-		err := database.DB.Where(&models.Team{Name: team_name}).Find(&team_obj).Error
+		err := database.DB.Preload("Leader").Where(&models.Team{Name: team_name}).First(&team_obj).Error
 		if err != nil {
-			log.Println(err)
-			context.HTML(http.StatusInternalServerError, "tasks_list.html", gin.H{
-				"message": "team not found!",
+			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "tasks_list.html", "team not found!")
+			return
+		}
+
+		if team_obj.Leader.Username != username {
+			context.HTML(http.StatusBadRequest, "delete_task.html", gin.H{
+				"message": "Only team leader can perform this action!",
 			})
 			return
 		}
 
-		err = database.DB.Where(&models.Task{Name: name, Team: team_obj}).Delete(&models.Task{}).Error
-		if err != nil {
-			log.Println(err)
-			context.HTML(http.StatusInternalServerError, "tasks_list.html", gin.H{
-				"message": "failed to delete the task!",
-			})
+		err2 := database.DB.Where(&models.Task{Name: name, Team: team_obj}).Delete(&models.Task{}).Error
+		if err2 != nil {
+			utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "tasks_list.html", "failed to delete the task!")
 			return
 		}
 
@@ -390,10 +367,7 @@ func TasklistHandler(context *gin.Context) {
 	err := database.DB.Preload("Members").Preload("Leader").Joins("JOIN team_users ON team_users.team_id=teams.id").Where("team_users.user_id=?", userID).Find(&user_teams).Error
 
 	if err != nil {
-		log.Println(err)
-		context.HTML(http.StatusInternalServerError, "tasks_list.html", gin.H{
-			"message": "failed to query db",
-		})
+		utils.ErrorCatcher(err, context, http.StatusInternalServerError, "tasks_list.html", "failed to query db")
 		return
 	}
 
@@ -403,14 +377,10 @@ func TasklistHandler(context *gin.Context) {
 	}
 
 	tasks_list := []models.Task{}
-	err = database.DB.Preload("Team").Preload("Team.Leader").Preload("Team.Members").Where("team_id IN ?", user_teams_ids).Find(&tasks_list).Error
+	err2 := database.DB.Preload("Team").Preload("Team.Leader").Preload("Team.Members").Where("team_id IN ?", user_teams_ids).Find(&tasks_list).Error
 
-	// TODO: Add error catching util to DRY!
-	if err != nil {
-		log.Println(err)
-		context.HTML(http.StatusInternalServerError, "tasks_list.html", gin.H{
-			"message": "failed to query db",
-		})
+	if err2 != nil {
+		utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "tasks_list.html", "failed to find all user's tasks!")
 		return
 	}
 
@@ -424,6 +394,15 @@ func UserDashboardHandler(context *gin.Context) {
 	session := sessions.Default(context)
 	username := session.Get("username")
 	context.HTML(http.StatusOK, "dashboard.html", gin.H{
+		"username": username,
+	})
+}
+
+// TODO: Complete this function later
+func DeleteAccountHandler(context *gin.Context) {
+	session := sessions.Default(context)
+	username := session.Get("username")
+	context.HTML(http.StatusOK, "delete_account.html", gin.H{
 		"username": username,
 	})
 }
