@@ -1,6 +1,8 @@
 package models
 
-import _ "gorm.io/gorm"
+import (
+	_ "gorm.io/gorm"
+)
 
 type UserType string
 
@@ -20,6 +22,27 @@ type User struct {
 	Email        string
 	Type         UserType
 	Score        int
+	ScoreCount   int
+}
+
+// TODO: Complete UpdateUserAverageScore method to update user's score!
+func (user *User) UpdateUserAverageScore(new_score int) int {
+	user.ScoreCount += 1
+	return (user.Score + new_score) / user.ScoreCount
+}
+
+func (user *User) UpdateUserType(new_type UserType) bool {
+	/*
+		This method returns true if existing user's type has been changed.
+		It also returns false if user had no type before!
+	*/
+	if user.Type != NoType {
+		user.Type = new_type
+		return false
+	}
+	user.Type = new_type
+	return true
+
 }
 
 type Team struct {
@@ -30,10 +53,67 @@ type Team struct {
 	Members  []User `gorm:"many2many:team_users;"`
 }
 
+// TODO: Complete AddMember method to add member to a team!
+func (team *Team) AddMember(user_obj User) bool {
+	if user_obj == team.Leader {
+		return false
+	}
+	team.Members = append(team.Members, user_obj)
+	return true
+}
+
+// TODO: Complete RemoveMember, so only leaders can remove a member!
+func (team *Team) RemoveMember(user_obj User) bool {
+	if user_obj == team.Leader {
+		return false
+	}
+	for ind, val := range team.Members {
+		if val == user_obj {
+			team.Members = append(team.Members[:ind], team.Members[ind+1:]...)
+		}
+	}
+	return true
+}
+
+// TODO: Complete ChangeLeader, so leaders be able to Change the leader of the team!
+func (team *Team) ChangeLeader(user_obj User) bool {
+	if user_obj == team.Leader {
+		return false
+	}
+	team.LeaderID = user_obj.ID
+	return true
+}
+
+type TaskStatus string
+
+var (
+	StatusPending   TaskStatus = "Pending"
+	StatusCompleted TaskStatus = "Completed"
+)
+
 type Task struct {
 	ID       int `gorm:"primaryKey"`
 	Name     string
 	TeamID   int
 	Team     Team `gorm:"foreignKey:TeamID"`
 	Deadline string
+	Status   TaskStatus
+}
+
+// TODO: Define a method named RenewDeadline so leader be able to renew the deadline!
+func (task *Task) RenewDeadline(new_deadline string) bool {
+	if new_deadline != "" {
+		task.Deadline = new_deadline
+		return true
+	}
+	return false
+}
+
+// TODO: Define a method named MarkAsCompleted to mark tasks as completed if they are not!
+func (task *Task) MarkAsCompleted() bool {
+	if task.Status == StatusPending {
+		task.Status = StatusCompleted
+		return true
+	}
+	return false
 }

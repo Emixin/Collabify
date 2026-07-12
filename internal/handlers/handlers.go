@@ -389,7 +389,7 @@ func TasklistHandler(context *gin.Context) {
 	})
 }
 
-// TODO: Complete this function later!
+// TODO: Complete UserDashboardHandler function later!
 func UserDashboardHandler(context *gin.Context) {
 	session := sessions.Default(context)
 	username := session.Get("username")
@@ -398,7 +398,7 @@ func UserDashboardHandler(context *gin.Context) {
 	})
 }
 
-// TODO: Complete this function later
+// TODO: Complete DeleteAccountHandler function later!
 func DeleteAccountHandler(context *gin.Context) {
 	session := sessions.Default(context)
 	username := session.Get("username")
