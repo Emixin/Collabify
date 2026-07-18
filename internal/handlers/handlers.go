@@ -402,7 +402,27 @@ func UserDashboardHandler(context *gin.Context) {
 func DeleteAccountHandler(context *gin.Context) {
 	session := sessions.Default(context)
 	username := session.Get("username")
-	context.HTML(http.StatusOK, "delete_account.html", gin.H{
-		"username": username,
-	})
+	username_string := username.(string)
+
+	switch context.Request.Method {
+	case "GET":
+		context.HTML(http.StatusOK, "delete_account.html", gin.H{
+			"username": username,
+		})
+	case "POST":
+		err := context.Request.ParseForm()
+		if err != nil {
+			utils.ErrorCatcher(err, context, http.StatusBadRequest, "delete_account.html", "confirmation failed!")
+		}
+		confirmation := context.Request.FormValue("confirmation")
+		if confirmation != "" {
+			if confirmation == "i want to delete my account" {
+				var user_obj models.User
+				err2 := database.DB.Where(&models.User{Username: username_string}).First(user_obj).Error
+				if err2 != nil {
+					return
+				}
+			}
+		}
+	}
 }

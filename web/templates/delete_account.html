@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Delete Account</title>
+    </head>
+    <body>
+        <form method="post">
+            <input name="confirmation">to confirm your account deletion please type "i want to delete my account" and submit!
+            <button type="submit">Submit</button>
+        </form>
+        {{if .message}}
+            <p>{{.message}}</p>
+        {{end}}
+    </body>
+</html>
