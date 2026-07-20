@@ -47,6 +47,7 @@ func main() {
 	router.GET("/delete_task", handlers.DeleteTaskHandler)
 	router.POST("/delete_task", handlers.DeleteTaskHandler)
 	router.Any("/dashboard", handlers.UserDashboardHandler)
+	router.Any("/delete_account", handlers.DeleteAccountHandler)
 
 	router.LoadHTMLGlob("web/templates/*.html")
 	router.Static("/statics", "./web/statics")

@@ -398,7 +398,6 @@ func UserDashboardHandler(context *gin.Context) {
 	})
 }
 
-// TODO: Complete DeleteAccountHandler function later!
 func DeleteAccountHandler(context *gin.Context) {
 	session := sessions.Default(context)
 	username := session.Get("username")
@@ -417,12 +416,28 @@ func DeleteAccountHandler(context *gin.Context) {
 		confirmation := context.Request.FormValue("confirmation")
 		if confirmation != "" {
 			if confirmation == "i want to delete my account" {
-				var user_obj models.User
-				err2 := database.DB.Where(&models.User{Username: username_string}).First(user_obj).Error
+				err2 := database.DB.Where(&models.User{Username: username_string}).Delete(&models.User{}).Error
 				if err2 != nil {
+					utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "delete_account.html", "could not find the user!")
 					return
 				}
+
+				session.Delete("user_id")
+				session.Delete("username")
+				session.Delete("email")
+				session.Save()
+				context.HTML(http.StatusOK, "delete_account.html", gin.H{
+					"message": "user has been deleted!",
+				})
+			} else {
+				context.HTML(http.StatusBadRequest, "delete_account.html", gin.H{
+					"message": "confirmation failed!",
+				})
 			}
+		} else {
+			context.HTML(http.StatusBadRequest, "delete_account.html", gin.H{
+				"message": "empty confirmation field!",
+			})
 		}
 	}
 }
