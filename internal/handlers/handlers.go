@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+
 	"github.com/Emixin/Collabify/internal/database"
 	"github.com/Emixin/Collabify/internal/models"
 	"github.com/Emixin/Collabify/internal/utils"
@@ -29,15 +31,58 @@ func HomepageHandler(context *gin.Context) {
 			"is_authenticated": false,
 		})
 	} else {
+
+		userID := session.Get("user_id")
+
+		if userID == nil {
+			context.HTML(http.StatusBadRequest, "tasks_list.html", gin.H{
+				"message": "you are not logged in!",
+			})
+			return
+		}
+
+		user_teams := []models.Team{}
+		err := database.DB.Preload("Members").Joins("JOIN team_users ON team_users.team_id=teams.id").Where("team_users.user_id=?", userID).Find(&user_teams).Error
+
+		if err != nil {
+			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "tasks_list.html", "failed to query db")
+			return
+		}
+
+		user_teams_ids := []uint{}
+		for _, team := range user_teams {
+			user_teams_ids = append(user_teams_ids, uint(team.ID))
+		}
+
+		zero := int64(0)
+		pending_tasks := &zero
+		// TODO: Check query here!
+		err2 := database.DB.Model(&models.Task{}).Where("status = ? AND team_id IN ?", models.StatusPending, user_teams_ids).Count(pending_tasks).Error
+
+		if err2 != nil {
+			utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "home.html", "failed to fetch user pending tasks!")
+			return
+		}
+
+		zero2 := int64(0)
+		tasks := &zero2
+		err3 := database.DB.Model(&models.Task{}).Where("team_id IN ?", user_teams_ids).Count(tasks).Error
+		if err3 != nil {
+			utils.ErrorCatcher(err3, context, http.StatusInternalServerError, "home.html", "failed to fetch user tasks!")
+			return
+		}
+
+		message := fmt.Sprintf("You have %d tasks and %d of them are pending", *tasks, *pending_tasks)
+
 		if username == nil {
 			context.HTML(http.StatusOK, "home.html", gin.H{
-				"message":          "You have 0 task and none of them is pending",
+				"message":          message,
 				"username":         "Anonymous User",
 				"is_authenticated": false,
 			})
 		} else {
 			context.HTML(http.StatusOK, "home.html", gin.H{
-				"message":          "You have 0 task and none of them is pending",
+				"message":          message,
 				"username":         username,
 				"is_authenticated": true,
 			})
@@ -393,9 +438,17 @@ func TasklistHandler(context *gin.Context) {
 func UserDashboardHandler(context *gin.Context) {
 	session := sessions.Default(context)
 	username := session.Get("username")
-	context.HTML(http.StatusOK, "dashboard.html", gin.H{
-		"username": username,
-	})
+
+	switch context.Request.Method {
+	case "GET":
+		context.HTML(http.StatusOK, "dashboard.html", gin.H{
+			"username": username,
+		})
+	case "POST":
+		context.HTML(http.StatusOK, "dashboard.html", gin.H{
+			"username": username,
+		})
+	}
 }
 
 func DeleteAccountHandler(context *gin.Context) {
