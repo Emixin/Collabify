@@ -38,6 +38,7 @@ func main() {
 	router.GET("/users_list", handlers.UserslistHandler)
 	router.GET("/teams_list", handlers.TeamslistHandler)
 	router.GET("/tasks_list", handlers.TasklistHandler)
+	router.POST("/tasks_list", handlers.TasklistHandler)
 	router.GET("/create_team", handlers.CreateTeamHandler)
 	router.POST("/create_team", handlers.CreateTeamHandler)
 	router.GET("/delete_team", handlers.DeleteTeamHandler)

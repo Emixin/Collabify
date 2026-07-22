@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/Emixin/Collabify/internal/database"
 	"github.com/Emixin/Collabify/internal/models"
@@ -23,40 +24,27 @@ func HomepageHandler(context *gin.Context) {
 
 	if redirected != nil {
 		session.Delete("redirect")
-		session.Save()
+		if err := session.Save(); err != nil {
+			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "home.html", "failed to save session!")
+			return
+		}
 
 		context.HTML(http.StatusOK, "home.html", gin.H{
 			"username":         "Anonymous User",
 			"redirect_message": "Logged out successfully!",
 			"is_authenticated": false,
 		})
+		return
 	} else {
 
-		userID := session.Get("user_id")
-
-		if userID == nil {
-			context.HTML(http.StatusBadRequest, "tasks_list.html", gin.H{
-				"message": "you are not logged in!",
-			})
+		user_teams_ids, crash := utils.UserTeamIDs(session, context, "home.html")
+		if crash {
+			utils.ErrorCatcher(nil, context, http.StatusInternalServerError, "home.html", "failed to fetch user teams")
 			return
-		}
-
-		user_teams := []models.Team{}
-		err := database.DB.Preload("Members").Joins("JOIN team_users ON team_users.team_id=teams.id").Where("team_users.user_id=?", userID).Find(&user_teams).Error
-
-		if err != nil {
-			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "tasks_list.html", "failed to query db")
-			return
-		}
-
-		user_teams_ids := []uint{}
-		for _, team := range user_teams {
-			user_teams_ids = append(user_teams_ids, uint(team.ID))
 		}
 
 		zero := int64(0)
 		pending_tasks := &zero
-		// TODO: Check query here!
 		err2 := database.DB.Model(&models.Task{}).Where("status = ? AND team_id IN ?", models.StatusPending, user_teams_ids).Count(pending_tasks).Error
 
 		if err2 != nil {
@@ -350,6 +338,7 @@ func CreateTaskHandler(context *gin.Context) {
 			Name:     name,
 			Team:     team_obj,
 			Deadline: deadline,
+			Status:   models.StatusPending,
 		}
 		database.DB.Create(&task)
 
@@ -398,40 +387,59 @@ func DeleteTaskHandler(context *gin.Context) {
 
 func TasklistHandler(context *gin.Context) {
 	session := sessions.Default(context)
-	userID := session.Get("user_id")
-	log.Printf("user id is:%v", userID)
 
-	if userID == nil {
-		context.HTML(http.StatusBadRequest, "tasks_list.html", gin.H{
-			"message": "you are not logged in!",
+	switch context.Request.Method {
+	case "GET":
+		user_teams_ids, crash := utils.UserTeamIDs(session, context, "tasks_list.html")
+		if crash {
+			utils.ErrorCatcher(nil, context, http.StatusInternalServerError, "tasks_list", "failed to fetch user teams")
+			return
+		}
+
+		tasks_list := []models.Task{}
+		err2 := database.DB.Preload("Team").Preload("Team.Leader").Preload("Team.Members").Where("team_id IN ?", user_teams_ids).Find(&tasks_list).Error
+
+		if err2 != nil {
+			utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "tasks_list.html", "failed to find all user's tasks!")
+			return
+		}
+
+		context.HTML(http.StatusOK, "tasks_list.html", gin.H{
+			"tasks_list": tasks_list,
 		})
-		return
+
+	case "POST":
+		task_id_str := context.Request.FormValue("task_id")
+		task_id_int, err := strconv.Atoi(task_id_str)
+		if err != nil {
+			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "tasks_list.html", "failed to find task")
+			return
+		}
+
+		var task_obj models.Task
+		err2 := database.DB.Where(&models.Task{ID: task_id_int}).First(&task_obj).Error
+		if err2 != nil {
+			utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "tasks_list.html", "failed to change task status")
+			return
+		}
+
+		changed := task_obj.MarkAsCompleted()
+		if changed {
+			err3 := database.DB.Where(&models.Task{ID: task_id_int}).Update("Status", models.StatusCompleted).Error
+			if err3 != nil {
+				utils.ErrorCatcher(err3, context, http.StatusInternalServerError, "tasks_list.html", "failed to change task status")
+				return
+			}
+			context.HTML(http.StatusOK, "tasks_list.html", gin.H{
+				"message": "task marked as completed!",
+			})
+			return
+		}
+
+		context.HTML(http.StatusBadRequest, "tasks_list.html", gin.H{
+			"message": "task was already marked as completed!",
+		})
 	}
-
-	user_teams := []models.Team{}
-	err := database.DB.Preload("Members").Preload("Leader").Joins("JOIN team_users ON team_users.team_id=teams.id").Where("team_users.user_id=?", userID).Find(&user_teams).Error
-
-	if err != nil {
-		utils.ErrorCatcher(err, context, http.StatusInternalServerError, "tasks_list.html", "failed to query db")
-		return
-	}
-
-	user_teams_ids := []uint{}
-	for _, team := range user_teams {
-		user_teams_ids = append(user_teams_ids, uint(team.ID))
-	}
-
-	tasks_list := []models.Task{}
-	err2 := database.DB.Preload("Team").Preload("Team.Leader").Preload("Team.Members").Where("team_id IN ?", user_teams_ids).Find(&tasks_list).Error
-
-	if err2 != nil {
-		utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "tasks_list.html", "failed to find all user's tasks!")
-		return
-	}
-
-	context.HTML(http.StatusOK, "tasks_list.html", gin.H{
-		"tasks_list": tasks_list,
-	})
 }
 
 // TODO: Complete UserDashboardHandler function later!
@@ -441,10 +449,6 @@ func UserDashboardHandler(context *gin.Context) {
 
 	switch context.Request.Method {
 	case "GET":
-		context.HTML(http.StatusOK, "dashboard.html", gin.H{
-			"username": username,
-		})
-	case "POST":
 		context.HTML(http.StatusOK, "dashboard.html", gin.H{
 			"username": username,
 		})
