@@ -20,7 +20,9 @@ func HomepageHandler(context *gin.Context) {
 
 	session := sessions.Default(context)
 	username := session.Get("username")
-	redirected := session.Get("redirect")
+
+	var redirected any
+	redirected = session.Get("redirect")
 
 	if redirected != nil {
 		session.Delete("redirect")
@@ -340,7 +342,11 @@ func CreateTaskHandler(context *gin.Context) {
 			Deadline: deadline,
 			Status:   models.StatusPending,
 		}
-		database.DB.Create(&task)
+		err2 := database.DB.Create(&task).Error
+		if err2 != nil {
+			utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "users_list.html", "team not created!")
+			return
+		}
 
 		context.HTML(http.StatusOK, "create_task.html", gin.H{
 			"message": "new task created!",
@@ -354,7 +360,11 @@ func DeleteTaskHandler(context *gin.Context) {
 		context.HTML(http.StatusOK, "delete_task.html", nil)
 	case "POST":
 		session := sessions.Default(context)
-		username := session.Get("username")
+		username, ok := session.Get("username").(string)
+		if !ok {
+			utils.ErrorCatcher(nil, context, http.StatusInternalServerError, "tasks_list.html", "username is not correct!")
+			return
+		}
 
 		name := context.Request.FormValue("Name")
 		team_name := context.Request.FormValue("Team")
@@ -458,7 +468,12 @@ func UserDashboardHandler(context *gin.Context) {
 func DeleteAccountHandler(context *gin.Context) {
 	session := sessions.Default(context)
 	username := session.Get("username")
-	username_string := username.(string)
+
+	username_string, ok := username.(string)
+	if !ok {
+		utils.ErrorCatcher(nil, context, http.StatusBadRequest, "delete_account.html", "you must be logged in to delete your account!")
+		return
+	}
 
 	switch context.Request.Method {
 	case "GET":
