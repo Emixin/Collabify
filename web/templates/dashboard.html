@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>User Dashboard</title>
+        <br><h1>Welcome {{ .username }}!</h1>
+        <link rel="stylesheet" href="statics/home.css">
+    </head>
+    <body>
+        <div class="links">
+            <br>
+            <a href="logout">Logout</a>
+            <a href="create_team">Create Team</a>
+            <a href="delete_team">Delete Team</a>
+            <a href="create_task">Create Task</a>
+            <a href="delete_task">Delete Task</a>
+            <a href="delete_account">Delete Account</a>
+            <a href="/">Home</a>
+        </div>
+        {{if .message}}
+            <p>{{.message}}</p>
+        {{end}}
+    </body>
+</html>
