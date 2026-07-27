@@ -23,9 +23,12 @@ func HomepageHandler(context *gin.Context) {
 
 	var redirected any
 	redirected = session.Get("redirect")
+	redirected_str, actually_redirected := redirected.(string)
 
-	if redirected != nil {
+	if actually_redirected && redirected_str != "" {
 		session.Delete("redirect")
+		session.Save()
+
 		if err := session.Save(); err != nil {
 			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "home.html", "failed to save session!")
 			return
@@ -45,28 +48,22 @@ func HomepageHandler(context *gin.Context) {
 			return
 		}
 
-		zero := int64(0)
-		pending_tasks := &zero
-		err2 := database.DB.Model(&models.Task{}).Where("status = ? AND team_id IN ?", models.StatusPending, user_teams_ids).Count(pending_tasks).Error
+		// Note: Tried to use one query instead of two queries!
+		all_tasks := database.DB.Model(&models.Task{}).Where("team_id IN ?", user_teams_ids)
+		var all_tasks_count int64
+		all_tasks.Count(&all_tasks_count)
 
-		if err2 != nil {
-			utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "home.html", "failed to fetch user pending tasks!")
-			return
-		}
+		all_tasks.Where("status = ?", models.StatusPending)
+		var pending_tasks_count int64
+		all_tasks.Count(&pending_tasks_count)
 
-		zero2 := int64(0)
-		tasks := &zero2
-		err3 := database.DB.Model(&models.Task{}).Where("team_id IN ?", user_teams_ids).Count(tasks).Error
-		if err3 != nil {
-			utils.ErrorCatcher(err3, context, http.StatusInternalServerError, "home.html", "failed to fetch user tasks!")
-			return
-		}
+		log.Printf("all tasks: %v\npending tasks: %v", all_tasks_count, pending_tasks_count)
+		log.Printf("username: %v", username)
 
-		message := fmt.Sprintf("You have %d tasks and %d of them are pending", *tasks, *pending_tasks)
+		message := fmt.Sprintf("You have %d tasks and %d of them are pending", all_tasks_count, pending_tasks_count)
 
 		if username == nil {
 			context.HTML(http.StatusOK, "home.html", gin.H{
-				"message":          message,
 				"username":         "Anonymous User",
 				"is_authenticated": false,
 			})
