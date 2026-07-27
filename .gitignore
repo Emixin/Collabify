@@ -1,3 +1,4 @@
 bin/
 cgo.ps1
 .env
+:memory
