@@ -1,8 +1,8 @@
 package utils
 
 import (
+	"errors"
 	"log"
-	"net/http"
 
 	"github.com/Emixin/Collabify/internal/database"
 	"github.com/Emixin/Collabify/internal/models"
@@ -39,24 +39,23 @@ func ErrorCatcher(err error, context *gin.Context, status_code int, template_nam
 	})
 }
 
-func UserTeamIDs(session sessions.Session, context *gin.Context, page string) ([]uint, bool) {
+func UserTeamIDs(session sessions.Session, context *gin.Context, page string) ([]uint, error) {
 	// Note: Added a util to don't repeat user teams ids query!
 
-	userID := session.Get("user_id")
+	userID, ok := session.Get("user_id").(string)
+	if !ok {
+		return []uint{}, errors.New("failed to fetch username")
+	}
 
-	if userID == nil {
-		context.HTML(http.StatusBadRequest, page, gin.H{
-			"message": "you are not logged in!",
-		})
-		return []uint{}, true
+	if userID == "" {
+		return []uint{}, errors.New("failed to fetch username!")
 	}
 
 	user_teams := []models.Team{}
 	err := database.DB.Preload("Members").Joins("JOIN team_users ON team_users.team_id=teams.id").Where("team_users.user_id=?", userID).Find(&user_teams).Error
 
 	if err != nil {
-		ErrorCatcher(err, context, http.StatusInternalServerError, page, "failed to query db")
-		return []uint{}, true
+		return []uint{}, errors.New("failed to find user teams!")
 	}
 
 	user_teams_ids := []uint{}
@@ -64,5 +63,5 @@ func UserTeamIDs(session sessions.Session, context *gin.Context, page string) ([
 		user_teams_ids = append(user_teams_ids, uint(team.ID))
 	}
 
-	return user_teams_ids, false
+	return user_teams_ids, nil
 }

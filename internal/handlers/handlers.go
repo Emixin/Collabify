@@ -27,7 +27,6 @@ func HomepageHandler(context *gin.Context) {
 
 	if actually_redirected && redirected_str != "" {
 		session.Delete("redirect")
-		session.Save()
 
 		if err := session.Save(); err != nil {
 			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "home.html", "failed to save session!")
@@ -42,9 +41,9 @@ func HomepageHandler(context *gin.Context) {
 		return
 	} else {
 
-		user_teams_ids, crash := utils.UserTeamIDs(session, context, "home.html")
-		if crash {
-			utils.ErrorCatcher(nil, context, http.StatusInternalServerError, "home.html", "failed to fetch user teams")
+		user_teams_ids, err := utils.UserTeamIDs(session, context, "home.html")
+		if err != nil {
+			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "home.html", err.Error())
 			return
 		}
 
@@ -58,7 +57,6 @@ func HomepageHandler(context *gin.Context) {
 		all_tasks.Count(&pending_tasks_count)
 
 		log.Printf("all tasks: %v\npending tasks: %v", all_tasks_count, pending_tasks_count)
-		log.Printf("username: %v", username)
 
 		message := fmt.Sprintf("You have %d tasks and %d of them are pending", all_tasks_count, pending_tasks_count)
 
@@ -197,8 +195,15 @@ func LogoutHandler(context *gin.Context) {
 
 	session := sessions.Default(context)
 
-	username := session.Get("username")
-	if username == nil {
+	username, ok := session.Get("username").(string)
+	log.Printf("username:%v", username)
+
+	if !ok {
+		utils.ErrorCatcher(nil, context, http.StatusOK, "home.html", "failed to fetch your username!")
+		return
+	}
+
+	if username == "" {
 		context.HTML(http.StatusBadRequest, "home.html", gin.H{
 			"message": "You are not logged in!",
 		})
@@ -209,8 +214,13 @@ func LogoutHandler(context *gin.Context) {
 	session.Delete("username")
 	session.Delete("email")
 	session.Set("redirect", "not nil")
-	session.Save()
-	context.Redirect(http.StatusTemporaryRedirect, "/")
+
+	if err := session.Save(); err != nil {
+		utils.ErrorCatcher(err, context, http.StatusInternalServerError, "home.html", "logout failed!")
+		return
+	}
+
+	context.Redirect(http.StatusFound, "/")
 }
 
 func UserslistHandler(context *gin.Context) {
@@ -397,9 +407,9 @@ func TasklistHandler(context *gin.Context) {
 
 	switch context.Request.Method {
 	case "GET":
-		user_teams_ids, crash := utils.UserTeamIDs(session, context, "tasks_list.html")
-		if crash {
-			utils.ErrorCatcher(nil, context, http.StatusInternalServerError, "tasks_list", "failed to fetch user teams")
+		user_teams_ids, err := utils.UserTeamIDs(session, context, "tasks_list.html")
+		if err != nil {
+			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "tasks_list", err.Error())
 			return
 		}
 
@@ -432,11 +442,12 @@ func TasklistHandler(context *gin.Context) {
 
 		changed := task_obj.MarkAsCompleted()
 		if changed {
-			err3 := database.DB.Where(&models.Task{ID: task_id_int}).Update("Status", models.StatusCompleted).Error
-			if err3 != nil {
-				utils.ErrorCatcher(err3, context, http.StatusInternalServerError, "tasks_list.html", "failed to change task status")
-				return
-			}
+			// err3 := database.DB.Where(&models.Task{ID: task_id_int}).Update("Status", models.StatusCompleted).Error
+			// if err3 != nil {
+			// 	utils.ErrorCatcher(err3, context, http.StatusInternalServerError, "tasks_list.html", "failed to change task status")
+			// 	return
+			// }
+			database.DB.Save(&task_obj)
 			context.HTML(http.StatusOK, "tasks_list.html", gin.H{
 				"message": "task marked as completed!",
 			})
