@@ -411,7 +411,7 @@ func TasklistHandler(context *gin.Context) {
 		return
 	}
 
-	42switch context.Request.Method {
+	switch context.Request.Method {
 	case "GET":
 		user_teams_ids, err := utils.UserTeamIDs(session, context, "tasks_list.html")
 		if err != nil {
