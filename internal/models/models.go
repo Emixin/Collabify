@@ -110,8 +110,8 @@ func (task *Task) RenewDeadline(new_deadline string) bool {
 }
 
 // TODO: Define a method named MarkAsCompleted to mark tasks as completed if they are not!
-func (task *Task) MarkAsCompleted() bool {
-	if task.Status == StatusPending {
+func (task *Task) MarkAsCompleted(user_id int, leader_id int) bool {
+	if task.Status == StatusPending && user_id == leader_id {
 		task.Status = StatusCompleted
 		return true
 	}

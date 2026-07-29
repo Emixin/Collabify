@@ -404,8 +404,14 @@ func DeleteTaskHandler(context *gin.Context) {
 
 func TasklistHandler(context *gin.Context) {
 	session := sessions.Default(context)
+	user_id, ok := session.Get("user_id").(int)
 
-	switch context.Request.Method {
+	if !ok {
+		utils.ErrorCatcher(nil, context, http.StatusInternalServerError, "tasks_list.html", "failed to fetch user id")
+		return
+	}
+
+	42switch context.Request.Method {
 	case "GET":
 		user_teams_ids, err := utils.UserTeamIDs(session, context, "tasks_list.html")
 		if err != nil {
@@ -434,13 +440,15 @@ func TasklistHandler(context *gin.Context) {
 		}
 
 		var task_obj models.Task
-		err2 := database.DB.Where(&models.Task{ID: task_id_int}).First(&task_obj).Error
+		err2 := database.DB.Preload("Team").Where(&models.Task{ID: task_id_int}).First(&task_obj).Error
 		if err2 != nil {
 			utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "tasks_list.html", "failed to change task status")
 			return
 		}
 
-		changed := task_obj.MarkAsCompleted()
+		leader_id := task_obj.Team.LeaderID
+
+		changed := task_obj.MarkAsCompleted(user_id, leader_id)
 		if changed {
 			// err3 := database.DB.Where(&models.Task{ID: task_id_int}).Update("Status", models.StatusCompleted).Error
 			// if err3 != nil {
@@ -450,6 +458,11 @@ func TasklistHandler(context *gin.Context) {
 			database.DB.Save(&task_obj)
 			context.HTML(http.StatusOK, "tasks_list.html", gin.H{
 				"message": "task marked as completed!",
+			})
+			return
+		} else if leader_id != user_id {
+			context.HTML(http.StatusBadRequest, "tasks_list.html", gin.H{
+				"message": "only team leader can perform this action!",
 			})
 			return
 		}
