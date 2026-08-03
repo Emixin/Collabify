@@ -32,7 +32,8 @@ func main() {
 	router.Use(sessions.Sessions("collabify-session", store))
 
 	router.GET("/", handlers.HomepageHandler)
-	router.Any("/login", handlers.LoginpageHandler)
+	router.GET("/login", handlers.LoginpageHandler)
+	router.POST("/login", handlers.LoginpageHandler)
 	router.Any("/signup", handlers.SignuppageHandler)
 	router.Any("/logout", handlers.LogoutHandler)
 	router.GET("/users_list", handlers.UserslistHandler)

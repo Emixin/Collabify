@@ -16,10 +16,10 @@ var (
 )
 
 type User struct {
-	ID           int `gorm:"primaryKey"`
-	Username     string
+	ID           int    `gorm:"primaryKey"`
+	Username     string `gorm:"unique"`
 	PasswordHash string
-	Email        string
+	Email        string `grom:"unique"`
 	Type         UserType
 	Score        int
 	ScoreCount   int
