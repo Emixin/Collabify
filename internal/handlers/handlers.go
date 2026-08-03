@@ -19,7 +19,12 @@ import (
 func HomepageHandler(context *gin.Context) {
 
 	session := sessions.Default(context)
-	username := session.Get("username")
+
+	username, ok := session.Get("username").(string)
+	if !ok {
+		utils.ErrorCatcher(nil, context, http.StatusInternalServerError, "home.html", "internal server error!")
+		return
+	}
 
 	var redirected any
 	redirected = session.Get("redirect")
@@ -60,7 +65,7 @@ func HomepageHandler(context *gin.Context) {
 
 		message := fmt.Sprintf("You have %d tasks and %d of them are pending", all_tasks_count, pending_tasks_count)
 
-		if username == nil {
+		if username == "" {
 			context.HTML(http.StatusOK, "home.html", gin.H{
 				"username":         "Anonymous User",
 				"is_authenticated": false,
@@ -125,67 +130,95 @@ func LoginpageHandler(context *gin.Context) {
 	}
 }
 
+// TODO: Review from here!
 func SignuppageHandler(context *gin.Context) {
 	session := sessions.Default(context)
-	user_id := session.Get("user_id")
 
-	if user_id != nil {
-		context.HTML(http.StatusBadRequest, "signup.html", gin.H{
-			"is_authenticated": true,
-		})
-		return
-	}
+	user_id, ok := session.Get("user_id").(int)
+	if !ok {
+		switch context.Request.Method {
+		case "GET":
+			context.HTML(http.StatusOK, "signup.html", nil)
 
-	switch context.Request.Method {
-	case "GET":
-		context.HTML(http.StatusOK, "signup.html", nil)
-
-	case "POST":
-		context.Request.ParseForm()
-		username := context.Request.FormValue("username")
-		email := context.Request.FormValue("email")
-		password := context.Request.FormValue("password")
-		confirm_password := context.Request.FormValue("confirm_password")
-
-		switch {
-		case username == "" || password == "" || confirm_password == "" || email == "":
-			context.HTML(http.StatusBadRequest, "signup.html", gin.H{
-				"message": "Please enter all fields then submit",
-			})
-		case password != confirm_password:
-			context.HTML(http.StatusBadRequest, "signup.html", gin.H{
-				"message": "passwords did not match!",
-			})
-		default:
-			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-
+		case "POST":
+			err := context.Request.ParseForm()
+			// TODO: Handle form errors!
 			if err != nil {
-				utils.ErrorCatcher(err, context, http.StatusInternalServerError, "signup.html", "failed to create new user!")
+				utils.ErrorCatcher(err, context, http.StatusBadRequest, "signup.html", err.Error())
 				return
 			}
 
-			user := models.User{
-				Username:     username,
-				PasswordHash: string(hashedPassword),
-				Email:        email,
-				Type:         "NoType",
-				Score:        0,
-			}
+			username := context.Request.FormValue("username")
+			email := context.Request.FormValue("email")
+			password := context.Request.FormValue("password")
+			confirm_password := context.Request.FormValue("confirm_password")
 
-			err2 := database.DB.Create(&user).Error
+			var all_usernames []string
+			err2 := database.DB.Model(&models.User{}).Select("username").Find(&all_usernames).Error
 			if err2 != nil {
-				utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "signup.html", "failed to create new user!")
+				utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "signup.html", "internal server error!")
 				return
 			}
 
-			context.HTML(http.StatusOK, "signup.html", gin.H{
-				"message": "new user created!",
+			log.Printf("all usernames: %v", all_usernames)
+
+			is_duplicate := false
+			for _, u := range all_usernames {
+				if u == username {
+					is_duplicate = true
+					break
+				}
+			}
+
+			//TODO: Check for duplicate username!
+			if is_duplicate {
+				utils.ErrorCatcher(err, context, http.StatusBadRequest, "signup.html", "username already exists!")
+				return
+			}
+
+			switch {
+			case username == "" || password == "" || confirm_password == "" || email == "":
+				context.HTML(http.StatusBadRequest, "signup.html", gin.H{
+					"message": "Please enter all fields then submit",
+				})
+			case password != confirm_password:
+				context.HTML(http.StatusBadRequest, "signup.html", gin.H{
+					"message": "passwords did not match!",
+				})
+			default:
+				hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+				if err != nil {
+					utils.ErrorCatcher(err, context, http.StatusInternalServerError, "signup.html", "failed to create new user!")
+					return
+				}
+
+				user := models.User{
+					Username:     username,
+					PasswordHash: string(hashedPassword),
+					Email:        email,
+					Type:         models.NoType,
+					Score:        0,
+				}
+
+				err2 := database.DB.Create(&user).Error
+				if err2 != nil {
+					utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "signup.html", "failed to create new user!")
+					return
+				}
+
+				// TODO: Redirect to loginpage when user created.
+				context.Redirect(http.StatusOK, "/login?message=new user created!")
+			}
+		default:
+			context.HTML(http.StatusMethodNotAllowed, "login.html", gin.H{
+				"message": "Method not allowed!",
 			})
 		}
-
-	default:
-		context.HTML(http.StatusMethodNotAllowed, "signup.html", gin.H{
-			"message": "Method not allowed!",
+	} else {
+		context.HTML(http.StatusBadRequest, "signup.html", gin.H{
+			"is_authenticated": true,
+			"user_id":          user_id,
 		})
 	}
 }
