@@ -20,11 +20,7 @@ func HomepageHandler(context *gin.Context) {
 
 	session := sessions.Default(context)
 
-	username, ok := session.Get("username").(string)
-	if !ok {
-		utils.ErrorCatcher(nil, context, http.StatusInternalServerError, "home.html", "internal server error!")
-		return
-	}
+	username := session.Get("username")
 
 	var redirected any
 	redirected = session.Get("redirect")
@@ -43,16 +39,14 @@ func HomepageHandler(context *gin.Context) {
 			"redirect_message": "Logged out successfully!",
 			"is_authenticated": false,
 		})
-		return
-	} else {
 
+	} else {
 		user_teams_ids, err := utils.UserTeamIDs(session, context, "home.html")
 		if err != nil {
 			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "home.html", err.Error())
 			return
 		}
 
-		// Note: Tried to use one query instead of two queries!
 		all_tasks := database.DB.Model(&models.Task{}).Where("team_id IN ?", user_teams_ids)
 		var all_tasks_count int64
 		all_tasks.Count(&all_tasks_count)
@@ -65,18 +59,11 @@ func HomepageHandler(context *gin.Context) {
 
 		message := fmt.Sprintf("You have %d tasks and %d of them are pending", all_tasks_count, pending_tasks_count)
 
-		if username == "" {
-			context.HTML(http.StatusOK, "home.html", gin.H{
-				"username":         "Anonymous User",
-				"is_authenticated": false,
-			})
-		} else {
-			context.HTML(http.StatusOK, "home.html", gin.H{
-				"message":          message,
-				"username":         username,
-				"is_authenticated": true,
-			})
-		}
+		context.HTML(http.StatusOK, "home.html", gin.H{
+			"message":          message,
+			"username":         username,
+			"is_authenticated": true,
+		})
 	}
 }
 
@@ -228,18 +215,9 @@ func LogoutHandler(context *gin.Context) {
 
 	session := sessions.Default(context)
 
-	username, ok := session.Get("username").(string)
-	log.Printf("username:%v", username)
-
+	_, ok := session.Get("username").(string)
 	if !ok {
 		utils.ErrorCatcher(nil, context, http.StatusOK, "home.html", "failed to fetch your username!")
-		return
-	}
-
-	if username == "" {
-		context.HTML(http.StatusBadRequest, "home.html", gin.H{
-			"message": "You are not logged in!",
-		})
 		return
 	}
 
@@ -304,7 +282,6 @@ func CreateTeamHandler(context *gin.Context) {
 			"message": "new team created!",
 		})
 	}
-
 }
 
 func DeleteTeamHandler(context *gin.Context) {
@@ -483,11 +460,6 @@ func TasklistHandler(context *gin.Context) {
 
 		changed := task_obj.MarkAsCompleted(user_id, leader_id)
 		if changed {
-			// err3 := database.DB.Where(&models.Task{ID: task_id_int}).Update("Status", models.StatusCompleted).Error
-			// if err3 != nil {
-			// 	utils.ErrorCatcher(err3, context, http.StatusInternalServerError, "tasks_list.html", "failed to change task status")
-			// 	return
-			// }
 			database.DB.Save(&task_obj)
 			context.HTML(http.StatusOK, "tasks_list.html", gin.H{
 				"message": "task marked as completed!",
