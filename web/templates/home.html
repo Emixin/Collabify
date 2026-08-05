@@ -2,10 +2,18 @@
 <html>
     <head>
         <title>Home Page</title>
-        <br>Welcome to collabify!
+        <br><h1>Welcome to collabify {{ .username }} !</h1>
         <link rel="stylesheet" href="statics/home.css">
     </head>
     <body>
+        {{ if .is_authenticated }}
+        <div class="links">
+            <a href="users_list">Users List</a>
+            <a href="teams_list">Teams List</a>
+            <a href="tasks_list">Tasks List</a>
+            <a href="dashboard">User Dashboard</a>
+        </div>
+        {{ else }}
         <div class="links">
             <br><a href="login">Login Page</a>
             <a href="signup">Signup Page</a>
@@ -13,5 +21,14 @@
             <a href="teams_list">Teams List</a>
             <a href="tasks_list">Tasks List</a>
         </div>
+        {{ end }}
+        {{ if .message }}
+            <p>{{ .message }}</p>
+        {{ end }}
+
+        {{ if .redirect_message }}
+            <p>{{ .redirect_message }}</p>
+        {{ end }}
+
     </body>
 </html>

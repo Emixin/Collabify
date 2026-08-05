@@ -1,43 +1,57 @@
 # Collabify
 
-**Collabify** is a lightweight team collaboration web application built with Go.  
-It lets users sign up, log in, view users, teams, and tasks — inspired by the same core ideas as TeamUps (users with character types, teams with leaders, and tasks).
+**Collabify** is a team collaboration web application built with Go.
+Users can sign up, log in, create and manage teams, create and complete tasks, and view personalized dashboards — inspired by the same core ideas as TeamUps (users with character types, teams with leaders, and tasks).
 
-This is a simpler, Go-based implementation using the Gin web framework and GORM with SQLite.
+Built with the Gin web framework, GORM, and SQLite.
 
 ## Features
 
-- **User Management**
+- **Authentication**
   - Sign up with username, email, and password
-  - Login page
-  - User character types: `Leader`, `Supporter`, `Doer`, `Thinker`, `Connector` (and `NoType`)
-  - Basic user scoring
+  - Login / Logout
+  - Session-based auth (cookie sessions via `gin-contrib/sessions`)
+  - Passwords hashed with **bcrypt**
+  - Account deletion with confirmation phrase
+
+- **User Profiles**
+  - Character types: `Leader`, `Supporter`, `Doer`, `Thinker`, `Connector`, `NoType`
+  - Score + score count (running average support)
+  - Dashboard with personal overview
 
 - **Teams**
-  - Teams with a designated leader
+  - Create teams (with a designated leader)
+  - Delete teams (leader only)
   - Many-to-many relationship between teams and members
+  - Helper methods: `AddMember`, `RemoveMember`, `ChangeLeader`
 
 - **Tasks**
-  - Tasks linked to teams
-  - Deadline field
+  - Create tasks linked to a team
+  - Delete tasks (leader only)
+  - Status: `Pending` / `Completed`
+  - Mark tasks as completed
+  - Deadline field + `RenewDeadline` helper
+  - Task list filtered to the current user’s teams
 
-- **Pages**
-  - Homepage
-  - Login / Signup
-  - Users list
-  - Teams list
-  - Tasks list
+- **Other**
+  - Homepage shows task counts (total + pending) for logged-in users
+  - Users list, Teams list
+  - Basic error handling utilities
+  - Unit test helpers (in-memory SQLite)
 
 ## Tech Stack
 
-| Layer         | Technology                  |
-|---------------|-----------------------------|
-| Language      | Go 1.26+                    |
-| Web Framework | Gin                         |
-| ORM           | GORM                        |
-| Database      | SQLite                      |
-| Templates     | HTML (Gin HTML renderer)    |
-| Static files  | CSS                         |
+| Layer           | Technology                          |
+|-----------------|-------------------------------------|
+| Language        | Go 1.26+                            |
+| Web Framework   | Gin                                 |
+| Sessions        | gin-contrib/sessions (cookie store) |
+| Password Hashing| golang.org/x/crypto/bcrypt          |
+| Config          | joho/godotenv                       |
+| ORM             | GORM                                |
+| Database        | SQLite                              |
+| Templates       | HTML (Gin HTML renderer)            |
+| Static files    | CSS                                 |
 
 ## Project Structure
 
@@ -45,36 +59,50 @@ This is a simpler, Go-based implementation using the Gin web framework and GORM 
 Collabify/
 ├── cmd/
 │   └── collabify/
-│       └── main.go              # Application entry point
+│       └── main.go                 # Entry point, routes, session setup
 ├── internal/
 │   ├── database/
-│   │   └── database.go          # SQLite + GORM setup & migrations
+│   │   └── database.go             # SQLite + GORM init & migrations
 │   ├── handlers/
-│   │   └── handlers.go          # HTTP handlers (pages + forms)
-│   └── models/
-│       └── models.go            # User, Team, Task models
+│   │   ├── handlers.go             # All HTTP handlers
+│   │   └── handlers_test.go        # Tests
+│   ├── middlewares/
+│   │   └── middlewares.go
+│   ├── models/
+│   │   └── models.go               # User, Team, Task + methods
+│   └── utils/
+│       └── utils.go                # ErrorCatcher, UserTeamIDs, test helpers
 ├── web/
 │   ├── statics/
-│   │   └── home.css
+│   │   ├── dashboard.css
+│   │   ├── home.css
+│   │   └── login.css
 │   └── templates/
 │       ├── home.html
 │       ├── login.html
 │       ├── signup.html
+│       ├── dashboard.html
 │       ├── users_list.html
 │       ├── teams_list.html
-│       └── tasks_list.html
+│       ├── tasks_list.html
+│       ├── create_team.html
+│       ├── delete_team.html
+│       ├── create_task.html
+│       ├── delete_task.html
+│       └── delete_account.html
 ├── data/
-│   └── db.sqlite                # SQLite database
+│   └── db.sqlite                   # SQLite database (created on first run)
 ├── go.mod
 ├── go.sum
-└── .gitignore
+├── .gitignore
+└── README.md
 ```
 
 ## Getting Started
 
 ### Prerequisites
 
-- Go 1.22+ (project uses Go 1.26.3 in `go.mod`)
+- Go 1.22+ (project uses Go 1.26.3)
 - Git
 
 ### 1. Clone the repository
@@ -84,56 +112,69 @@ git clone https://github.com/Emixin/Collabify.git
 cd Collabify
 ```
 
-### 2. Install dependencies
+### 2. Environment variables
+
+Create a `.env` file in the project root:
+
+```env
+SESSION_SECRET=your-long-random-secret-here
+```
+
+> The app will panic on startup if `SESSION_SECRET` is missing.
+
+### 3. Install dependencies
 
 ```bash
 go mod download
 ```
 
-### 3. Run the application
+### 4. Run the application
 
 ```bash
 go run ./cmd/collabify
 ```
 
-The server starts at: **http://localhost:8080**
+Server starts at: **http://localhost:8080**
 
-### Available Routes
+The SQLite database is created automatically at `data/db.sqlite` on first run (via GORM AutoMigrate).
 
-| Method | Path          | Description          |
-|--------|---------------|----------------------|
-| GET    | `/`           | Homepage             |
-| GET    | `/login`      | Login page           |
-| POST   | `/login`      | Handle login form    |
-| GET    | `/signup`     | Signup page          |
-| POST   | `/signup`     | Create new user      |
-| GET    | `/users_list` | List all users       |
-| GET    | `/teams_list` | List all teams       |
-| GET    | `/tasks_list` | List all tasks       |
+## Routes
+
+| Method(s)   | Path              | Description                          |
+|-------------|-------------------|--------------------------------------|
+| GET         | `/`               | Homepage (task summary if logged in) |
+| GET / POST  | `/login`          | Login                                |
+| GET / POST  | `/signup`         | Sign up                              |
+| ANY         | `/logout`         | Logout                               |
+| ANY         | `/dashboard`      | User dashboard                       |
+| ANY         | `/delete_account` | Delete own account                   |
+| GET         | `/users_list`     | List all users                       |
+| GET         | `/teams_list`     | List all teams                       |
+| GET / POST  | `/tasks_list`     | List user’s tasks / mark completed   |
+| GET / POST  | `/create_team`    | Create a team                        |
+| GET / POST  | `/delete_team`    | Delete a team (leader only)          |
+| GET / POST  | `/create_task`    | Create a task                        |
+| GET / POST  | `/delete_task`    | Delete a task (leader only)          |
 
 ## Models Overview
 
 ### User
-- `ID`, `Username`, `Email`
-- `Type` — one of: Leader, Supporter, Doer, Thinker, Connector, NoType
-- `Score`
+- `ID`, `Username`, `PasswordHash`, `Email`
+- `Type` — Leader / Supporter / Doer / Thinker / Connector / NoType
+- `Score`, `ScoreCount`
+- Methods: `UpdateUserAverageScore`, `UpdateUserType`
 
 ### Team
 - `ID`, `Name`
 - `Leader` (belongs to User)
 - `Members` (many-to-many with User)
+- Methods: `AddMember`, `RemoveMember`, `ChangeLeader`
 
 ### Task
-- `ID`, `Name`
+- `ID`, `Name`, `Deadline`
 - `Team` (belongs to Team)
-- `Deadline` (string)
-
-## Notes
-
-- Authentication is currently basic (form handling exists, but session/auth middleware is not fully implemented yet in main branch).
-- Passwords are accepted on signup/login but are **not yet hashed or stored** — this is improved in dev branch.
-- Database is auto-migrated on startup via GORM.
-- The SQLite file lives in `data/db.sqlite`.
+- `Status` — Pending / Completed
+- Methods: `RenewDeadline`, `MarkAsCompleted`
 
 ## License
 

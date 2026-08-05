@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Create a Task</title>
+    </head>
+    <body>
+        <form method="post">
+            <input name="Name">Name
+            <input name="Team">Team
+            <input name="Deadline">Deadline
+            <button type="submit">Submit</button>
+        </form>
+        {{if .message}}
+            <p>{{.message}}</p>
+        {{end}}
+    </body>
+</html>

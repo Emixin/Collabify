@@ -7,7 +7,11 @@
 
     <ul>
         {{range .tasks_list}}
-            <li>ID: {{.ID}}, Name: {{.Name}}, TeamID: {{.TeamID}}, Team: {{.Team.Name}}, Deadline: {{.Deadline}}</li>
+            <li>ID: {{.ID}}, Name: {{.Name}}, TeamID: {{.TeamID}}, Team: {{.Team.Name}}, Deadline: {{.Deadline}}, Status: {{.Status}}</li>
+            <form method="post" action="\tasks_list">
+                <input type="hidden" name="task_id" value="{{.ID}}">
+                <button type="submit">Toggle Status</button>
+            </form>
         {{end}}
     </ul>
 
@@ -15,6 +19,5 @@
     {{if .message}}
         <p>{{.message}}</p>
     {{end}}
-    </br>
     </body>
 </html>

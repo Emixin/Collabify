@@ -2,23 +2,23 @@
 <html>
     <head>
         <title>Login Page</title>
-        <br>Login</br>
+        <br><h1>Login</h1>
+        <link rel="stylesheet" href="statics/login.css">
     </head>
     <body>
     <br>
-        <form method="post" action="\login">
-            <input name="username">username</input>
-            <br><input name="password">password</input></br>
-            <button type="submit">submit</button>
-        </form>
-    </br>
+        <div class="login_form">
+            <form method="post" action="\login">
+                <div class="form_inputs">
+                    <input name="username"><h2>username</h2>
+                    <br><input type="password" name="password"><h2>password</h2>
+                    <button type="submit"><h2>submit</h2></button>
+                </div>
+            </form>
+        </div>
     <br>
-        {{if .message}}
-            <p>{{.message}}</p>
-        {{end}}
-    </br>
+    {{if .message}}
+        <p>{{.message}}</p>
+    {{end}}
     </body>
-    <script>
-        console.log("Current URL: " + window.location.href);
-    </script>
 </html>
