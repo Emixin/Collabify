@@ -16,11 +16,25 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// TODO: Check HomepageHandler
 func HomepageHandler(context *gin.Context) {
 
 	session := sessions.Default(context)
 
-	username := session.Get("username")
+	var username string
+	usernameAny := session.Get("username")
+
+	switch usernameString := usernameAny.(type) {
+	case string:
+		username = usernameString
+		log.Println("username:", username)
+	case nil:
+		username = ""
+		log.Println("username is nil!")
+	default:
+		username = "Anonymous User"
+		log.Printf("username has other types: %T", username)
+	}
 
 	var redirected any
 	redirected = session.Get("redirect")
@@ -35,35 +49,52 @@ func HomepageHandler(context *gin.Context) {
 		}
 
 		context.HTML(http.StatusOK, "home.html", gin.H{
-			"username":         "Anonymous User",
+			"username":         username,
 			"redirect_message": "Logged out successfully!",
 			"is_authenticated": false,
 		})
 
 	} else {
-		user_teams_ids, err := utils.UserTeamIDs(session, context, "home.html")
-		if err != nil {
-			utils.ErrorCatcher(err, context, http.StatusInternalServerError, "home.html", err.Error())
-			return
+		switch {
+		case username != "" && username != "Anonymous User":
+			user_teams_ids, err := utils.UserTeamIDs(session, context, "home.html")
+			if err != nil {
+				utils.ErrorCatcher(err, context, http.StatusInternalServerError, "home.html", err.Error())
+				return
+			}
+
+			all_tasks := database.DB.Model(&models.Task{}).Where("team_id IN ?", user_teams_ids)
+			var all_tasks_count int64
+			all_tasks.Count(&all_tasks_count)
+
+			all_tasks.Where("status = ?", models.StatusPending)
+			var pending_tasks_count int64
+			all_tasks.Count(&pending_tasks_count)
+
+			log.Printf("all tasks: %v\npending tasks: %v", all_tasks_count, pending_tasks_count)
+
+			message := fmt.Sprintf("You have %d tasks and %d of them are pending", all_tasks_count, pending_tasks_count)
+
+			context.HTML(http.StatusOK, "home.html", gin.H{
+				"message":          message,
+				"username":         username,
+				"is_authenticated": true,
+			})
+
+		case username != "" && username == "Anonymous User":
+			context.HTML(http.StatusOK, "home.html", gin.H{
+				"message":          "We Couldn't fetch your pending tasks!",
+				"username":         username,
+				"is_authenticated": false,
+			})
+
+		default:
+			context.HTML(http.StatusOK, "home.html", gin.H{
+				"message":          "Login to see your pending tasks!",
+				"username":         username,
+				"is_authenticated": false,
+			})
 		}
-
-		all_tasks := database.DB.Model(&models.Task{}).Where("team_id IN ?", user_teams_ids)
-		var all_tasks_count int64
-		all_tasks.Count(&all_tasks_count)
-
-		all_tasks.Where("status = ?", models.StatusPending)
-		var pending_tasks_count int64
-		all_tasks.Count(&pending_tasks_count)
-
-		log.Printf("all tasks: %v\npending tasks: %v", all_tasks_count, pending_tasks_count)
-
-		message := fmt.Sprintf("You have %d tasks and %d of them are pending", all_tasks_count, pending_tasks_count)
-
-		context.HTML(http.StatusOK, "home.html", gin.H{
-			"message":          message,
-			"username":         username,
-			"is_authenticated": true,
-		})
 	}
 }
 
