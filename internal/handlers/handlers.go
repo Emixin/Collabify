@@ -169,7 +169,7 @@ func SignuppageHandler(context *gin.Context) {
 
 			var service services.UserService
 			service.DB = database.DB
-			_, err2 := service.CreateUser(request)
+			_, err2 := service.CreateUserService(request)
 			if err2 != nil {
 				utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "signup.html", err2.Error())
 				return

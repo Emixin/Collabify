@@ -22,7 +22,7 @@ type CreateUserRequest struct {
 	ConfirmPassword string `form:"confirm_password"`
 }
 
-func (service *UserService) CreateUser(request CreateUserRequest) (*models.User, error) {
+func (service *UserService) CreateUserService(request CreateUserRequest) (*models.User, error) {
 	password := request.Password
 	confirm := request.ConfirmPassword
 
