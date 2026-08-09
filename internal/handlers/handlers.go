@@ -6,6 +6,7 @@ import (
 
 	"github.com/Emixin/Collabify/internal/database"
 	"github.com/Emixin/Collabify/internal/models"
+	"github.com/Emixin/Collabify/internal/services"
 	"github.com/Emixin/Collabify/internal/utils"
 	"github.com/gin-contrib/sessions"
 
@@ -16,7 +17,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// TODO: Check HomepageHandler
+// TODO: Fix username fetch error even when the user is logged in
 func HomepageHandler(context *gin.Context) {
 
 	session := sessions.Default(context)
@@ -159,75 +160,23 @@ func SignuppageHandler(context *gin.Context) {
 			context.HTML(http.StatusOK, "signup.html", nil)
 
 		case "POST":
-			err := context.Request.ParseForm()
-			// TODO: Handle form errors!
+			var request services.CreateUserRequest
+			err := context.ShouldBind(&request)
 			if err != nil {
-				utils.ErrorCatcher(err, context, http.StatusBadRequest, "signup.html", err.Error())
+				utils.ErrorCatcher(err, context, http.StatusInternalServerError, "signup.html", "internal server error!")
 				return
 			}
 
-			username := context.Request.FormValue("username")
-			email := context.Request.FormValue("email")
-			password := context.Request.FormValue("password")
-			confirm_password := context.Request.FormValue("confirm_password")
-
-			var all_usernames []string
-			err2 := database.DB.Model(&models.User{}).Select("username").Find(&all_usernames).Error
+			var service services.UserService
+			service.DB = database.DB
+			_, err2 := service.CreateUser(request)
 			if err2 != nil {
-				utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "signup.html", "internal server error!")
+				utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "signup.html", err2.Error())
 				return
 			}
 
-			log.Printf("all usernames: %v", all_usernames)
-
-			is_duplicate := false
-			for _, u := range all_usernames {
-				if u == username {
-					is_duplicate = true
-					break
-				}
-			}
-
-			//TODO: Check for duplicate username!
-			if is_duplicate {
-				utils.ErrorCatcher(err, context, http.StatusBadRequest, "signup.html", "username already exists!")
-				return
-			}
-
-			switch {
-			case username == "" || password == "" || confirm_password == "" || email == "":
-				context.HTML(http.StatusBadRequest, "signup.html", gin.H{
-					"message": "Please enter all fields then submit",
-				})
-			case password != confirm_password:
-				context.HTML(http.StatusBadRequest, "signup.html", gin.H{
-					"message": "passwords did not match!",
-				})
-			default:
-				hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-
-				if err != nil {
-					utils.ErrorCatcher(err, context, http.StatusInternalServerError, "signup.html", "failed to create new user!")
-					return
-				}
-
-				user := models.User{
-					Username:     username,
-					PasswordHash: string(hashedPassword),
-					Email:        email,
-					Type:         models.NoType,
-					Score:        0,
-				}
-
-				err2 := database.DB.Create(&user).Error
-				if err2 != nil {
-					utils.ErrorCatcher(err2, context, http.StatusInternalServerError, "signup.html", "failed to create new user!")
-					return
-				}
-
-				// TODO: Redirect to loginpage when user created.
-				context.Redirect(http.StatusOK, "/login?message=new user created!")
-			}
+			// TODO: Redirect to loginpage when user created.
+			context.Redirect(http.StatusFound, "/login?message=new user created!")
 		default:
 			context.HTML(http.StatusMethodNotAllowed, "login.html", gin.H{
 				"message": "Method not allowed!",
