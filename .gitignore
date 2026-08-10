@@ -3,3 +3,4 @@ cgo.ps1
 data/
 .env
 :memory
+.vs

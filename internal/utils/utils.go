@@ -43,12 +43,13 @@ func ErrorCatcher(err error, context *gin.Context, status_code int, template_nam
 func UserTeamIDs(session sessions.Session, context *gin.Context, page string) ([]uint, error) {
 	// Note: Added a util to don't repeat user teams ids query!
 
-	userID, ok := session.Get("user_id").(string)
+	userID, ok := session.Get("user_id").(int)
+	log.Printf("user id is:%v", userID)
 	if !ok {
 		return []uint{}, errors.New("failed to fetch username")
 	}
 
-	if userID == "" {
+	if userID == 0 {
 		return []uint{}, errors.New("failed to fetch username!")
 	}
 
