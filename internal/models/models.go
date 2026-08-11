@@ -1,6 +1,8 @@
 package models
 
 import (
+	"fmt"
+
 	_ "gorm.io/gorm"
 )
 
@@ -45,6 +47,11 @@ func (user *User) UpdateUserType(new_type UserType) bool {
 
 }
 
+// NOTE: Defined a function to describe users
+func (user *User) String() string {
+	return fmt.Sprintf("user %v (%v)", user.Username, user.Type)
+}
+
 type Team struct {
 	ID       int `gorm:"primaryKey"`
 	Name     string
@@ -84,6 +91,11 @@ func (team *Team) ChangeLeader(user_obj User) bool {
 	return true
 }
 
+// NOTE: Defined a function to describe teams
+func (team *Team) String() string {
+	return fmt.Sprintf("team %v (%v)", team.Name, team.Leader.Username)
+}
+
 type TaskStatus string
 
 var (
@@ -116,4 +128,9 @@ func (task *Task) MarkAsCompleted(user_id int, leader_id int) bool {
 		return true
 	}
 	return false
+}
+
+// NOTE: Defined a function to describe tasks
+func (task *Task) String() string {
+	return fmt.Sprintf("task %v (%v)", task.Name, task.Status)
 }
