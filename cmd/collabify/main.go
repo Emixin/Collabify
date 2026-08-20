@@ -6,6 +6,7 @@ import (
 
 	"github.com/Emixin/Collabify/internal/database"
 	"github.com/Emixin/Collabify/internal/handlers"
+	"github.com/Emixin/Collabify/internal/interfaces"
 	"github.com/Emixin/Collabify/internal/middlewares"
 
 	"github.com/gin-contrib/sessions"
@@ -57,6 +58,15 @@ func main() {
 	protected.Any("/logout", handlers.LogoutHandler)
 	protected.Any("/dashboard", handlers.UserDashboardHandler)
 	protected.Any("/delete_account", handlers.DeleteAccountHandler)
+
+	APIs := router.Group("/APIs")
+	APIs.GET("/get_users", interfaces.GetUsersAPIHandler)
+
+	protectedAPIs := APIs.Group("/")
+	protectedAPIs.Use(middlewares.JWTMiddleware())
+
+	protectedAPIs.POST("/create_user", interfaces.CreateUserAPIHandler)
+	protectedAPIs.DELETE("/delete_user", interfaces.DeleteUserAPIHandler)
 
 	router.LoadHTMLGlob("web/templates/*.html")
 	router.Static("/statics", "./web/statics")
