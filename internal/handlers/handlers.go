@@ -2,13 +2,17 @@ package handlers
 
 import (
 	"fmt"
+	"maps"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/Emixin/Collabify/internal/database"
 	"github.com/Emixin/Collabify/internal/models"
 	"github.com/Emixin/Collabify/internal/services"
 	"github.com/Emixin/Collabify/internal/utils"
 	"github.com/gin-contrib/sessions"
+	"github.com/golang-jwt/jwt/v5"
 
 	"log"
 	"net/http"
@@ -17,7 +21,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// TODO: Fix username fetch error even when the user is logged in
 func HomepageHandler(context *gin.Context) {
 
 	session := sessions.Default(context)
@@ -131,6 +134,28 @@ func LoginpageHandler(context *gin.Context) {
 			return
 		}
 
+		//TODO: Add a jwt token for user after authentication
+		customClaims := map[string]any{"user_id": user_obj.ID, "username": user_obj.Username, "email": user_obj.Email}
+		jwtClaims := jwt.MapClaims{"exp": jwt.NewNumericDate(time.Now().Add(1 * time.Minute))}
+
+		maps.Copy(jwtClaims, customClaims)
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwtClaims)
+
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			utils.ErrorCatcher(nil, context, http.StatusInternalServerError, "login.html", "Could not create user token!")
+			return
+		}
+
+		signedToken, err3 := token.SignedString([]byte(secret))
+		if err3 != nil {
+			utils.ErrorCatcher(err3, context, http.StatusInternalServerError, "login.html", "Could not sign user token!")
+			return
+		}
+
+		context.SetCookie("token", signedToken, 60, "/", "", false, true)
+
 		session := sessions.Default(context)
 		session.Set("user_id", user_obj.ID)
 		session.Set("username", user_obj.Username)
@@ -149,7 +174,6 @@ func LoginpageHandler(context *gin.Context) {
 	}
 }
 
-// TODO: Review from here!
 func SignuppageHandler(context *gin.Context) {
 	session := sessions.Default(context)
 
@@ -175,7 +199,7 @@ func SignuppageHandler(context *gin.Context) {
 				return
 			}
 
-			// TODO: Redirect to loginpage when user created.
+			// NOTE: Redirect to loginpage when user created.
 			context.Redirect(http.StatusFound, "/login?message=new user created!")
 		default:
 			context.HTML(http.StatusMethodNotAllowed, "login.html", gin.H{
@@ -214,6 +238,7 @@ func LogoutHandler(context *gin.Context) {
 	context.Redirect(http.StatusFound, "/")
 }
 
+// TODO: Review from here!
 func UserslistHandler(context *gin.Context) {
 	users_list := []models.User{}
 	err := database.DB.Find(&users_list).Error
