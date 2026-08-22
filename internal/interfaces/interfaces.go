@@ -1,15 +1,95 @@
 package interfaces
 
 import (
+	"maps"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/Emixin/Collabify/internal/database"
 	"github.com/Emixin/Collabify/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 //TODO: Write your APIs and REST APIs here!
+
+type UserSignupAPIRequest struct {
+	Username        string `json:"username"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirm_password"`
+}
+
+func SignupAPIHandler(context *gin.Context) {
+	//TODO: Complete here later
+}
+
+type UserLoginAPIRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func LoginAPIHandler(context *gin.Context) {
+	var request UserLoginAPIRequest
+	err := context.ShouldBindJSON(&request)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	var user models.User
+	username := request.Username
+	err = database.DB.Where(&models.User{Username: username}).Find(&user).Error
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(request.Password))
+	if err != nil {
+		context.JSON(http.StatusUnauthorized, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	//TODO: Also add a jwt token here for user after authentication
+	customClaims := map[string]any{"user_id": user.ID, "username": user.Username, "email": user.Email}
+	jwtClaims := jwt.MapClaims{"exp": jwt.NewNumericDate(time.Now().Add(1 * time.Minute))}
+
+	maps.Copy(jwtClaims, customClaims)
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwtClaims)
+
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Could not create user token!",
+		})
+		return
+	}
+
+	signedToken, err3 := token.SignedString([]byte(secret))
+	if err3 != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Could not create user token!",
+		})
+		return
+	}
+
+	context.SetCookie("token", signedToken, 60, "/", "", false, true)
+
+	context.JSON(http.StatusOK, gin.H{
+		"message": "Logged in successfully!",
+	})
+
+}
 
 type CreateUserAPIRequest struct {
 	Username        string `json:"username"`
